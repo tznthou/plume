@@ -10,6 +10,8 @@ html,
 body {
   height: 100%;
   margin: 0;
+  /* app shell：root 不捲動。沒鎖的話 macOS 兩指橫滑會觸發整頁 rubber-band，左右拖出白邊 */
+  overflow: hidden;
 }
 
 body {
@@ -89,6 +91,12 @@ main {
 
 #editor .cm-editor {
   height: 100%;
+}
+
+/* pane 捲到底時不把捲動外溢給 root（同樣會引發 rubber-band 白邊） */
+#editor .cm-scroller,
+#preview {
+  overscroll-behavior: none;
 }
 
 #editor .cm-editor.cm-focused {
