@@ -4,6 +4,7 @@ import { getContent, getScrollDOM, initEditor, onChange } from "./editor";
 import { initPreview, showError, update } from "./preview";
 import { render } from "./renderer";
 import {
+  exportHtml,
   initFileModule,
   markDirty,
   newFile,
@@ -66,11 +67,12 @@ const doOpen = withRecentRefresh(openFile);
 const doSave = withRecentRefresh(saveFile);
 const doSaveAs = withRecentRefresh(saveAs);
 
-// ----- 工具列（#btn-export 於 Task 7 接線） -----
+// ----- 工具列 -----
 
 document.querySelector("#btn-new")!.addEventListener("click", doNew);
 document.querySelector("#btn-open")!.addEventListener("click", doOpen);
 document.querySelector("#btn-save")!.addEventListener("click", doSave);
+document.querySelector("#btn-export")!.addEventListener("click", () => void exportHtml());
 
 // ----- 快捷鍵 Cmd+N / Cmd+O / Cmd+S / Cmd+Shift+S -----
 

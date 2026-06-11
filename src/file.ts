@@ -4,7 +4,9 @@
 import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import hljsThemeCss from "highlight.js/styles/github.css?raw";
 import { getContent, setContent } from "./editor";
+import { render } from "./renderer";
 import { addRecent, removeRecent } from "./recent";
 
 interface DocState {
@@ -130,6 +132,77 @@ async function writeTo(path: string): Promise<boolean> {
     // SPEC 錯誤處理：寫檔失敗保留編輯內容與 dirty 狀態，阻斷 dialog 顯示原因
     await message(`儲存失敗：${String(e)}`, { title: "儲存失敗", kind: "error" });
     return false;
+  }
+}
+
+// ----- 匯出 HTML（Task 7）-----
+// SPEC 格式契約：單一獨立檔 = doctype + 內嵌 <style>（預覽同款 typography + hljs 主題）+
+// 渲染後 body，無外部資源引用，離線可開。typography 與 src/style.css 的 #preview 規則
+// 對應（selector 改為 body scope）。模板為字串常數，不另開檔案（PLAN 注記）。
+const EXPORT_TYPOGRAPHY_CSS = `
+body { max-width: 800px; margin: 0 auto; padding: 24px 32px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px; line-height: 1.6; color: #1f2328; word-wrap: break-word; }
+h1, h2, h3, h4, h5, h6 { margin-top: 24px; margin-bottom: 16px; font-weight: 600; line-height: 1.25; }
+h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid #d1d9e0; }
+h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #d1d9e0; }
+h3 { font-size: 1.25em; }
+h4 { font-size: 1em; }
+h5 { font-size: 0.875em; }
+h6 { font-size: 0.85em; color: #59636e; }
+p, blockquote, ul, ol, dl, table, pre { margin-top: 0; margin-bottom: 16px; }
+a { color: #0969da; text-decoration: none; }
+a:hover { text-decoration: underline; }
+blockquote { padding: 0 1em; color: #59636e; border-left: 0.25em solid #d1d9e0; }
+ul, ol { padding-left: 2em; }
+li + li { margin-top: 0.25em; }
+img { max-width: 100%; }
+hr { height: 0.25em; margin: 24px 0; padding: 0; background: #d1d9e0; border: 0; }
+code, pre { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; }
+code { padding: 0.2em 0.4em; font-size: 85%; background: rgba(175, 184, 193, 0.2); border-radius: 6px; }
+pre { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background: #f6f8fa; border-radius: 6px; }
+pre code { padding: 0; font-size: 100%; background: transparent; border-radius: 0; }
+table { display: block; max-width: 100%; overflow: auto; border-collapse: collapse; border-spacing: 0; }
+th, td { padding: 6px 13px; border: 1px solid #d1d9e0; }
+th { font-weight: 600; }
+tbody tr:nth-child(2n) { background: #f6f8fa; }
+.task-list-item { list-style-type: none; }
+.task-list-item-checkbox { margin: 0 0.2em 0.25em -1.4em; vertical-align: middle; }
+`;
+
+// 純函式，供測試直接驗證模板結構。bodyHtml 必須是 render() 的輸出（已過 DOMPurify）。
+export function buildExportHtml(title: string, bodyHtml: string): string {
+  return `<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${title}</title>
+<style>
+${EXPORT_TYPOGRAPHY_CSS}
+${hljsThemeCss}
+</style>
+</head>
+<body>
+${bodyHtml}
+</body>
+</html>
+`;
+}
+
+export async function exportHtml(): Promise<void> {
+  const target = await save({
+    filters: [{ name: "HTML", extensions: ["html"] }],
+    defaultPath: fileName().replace(/\.(md|markdown)$/i, "") + ".html",
+  });
+  if (target === null) return;
+  // 經 render() 輸出 = 已過 DOMPurify，sanitize 不可被匯出繞過（SPEC 安全規格）
+  const html = buildExportHtml(fileName(), render(getContent()));
+  try {
+    await writeTextFile(target, html);
+  } catch (e) {
+    // 匯出是副本輸出，不碰 DocState；失敗同寫檔標準：阻斷 dialog 顯示原因
+    await message(`匯出失敗：${String(e)}`, { title: "匯出失敗", kind: "error" });
   }
 }
 
