@@ -45,23 +45,23 @@
     <footer id="statusbar">
       <div class="gauges">
         <!-- g-label 文字由 CSS 依主題切換：03 儀表縮寫 / 05 中文 -->
-        <span class="gauge"
+        <span class="gauge" aria-label="字數"
           ><span class="g-label" data-vol="ALT" data-ink="字數"></span
           ><span class="g-num" id="stat-chars">0</span><span class="g-unit">字</span></span
         >
         <span class="ticks" aria-hidden="true"></span>
-        <span class="gauge"
+        <span class="gauge" aria-label="行數"
           ><span class="g-label" data-vol="HDG" data-ink="行數"></span
           ><span class="g-num" id="stat-lines">1</span><span class="g-unit">行</span></span
         >
         <span class="ticks" aria-hidden="true"></span>
-        <span class="gauge"
+        <span class="gauge" aria-label="渲染時間"
           ><span class="g-label" data-vol="ETA" data-ink="渲染"></span
           ><span class="g-num" id="stat-ms">0</span><span class="g-unit">ms</span></span
         >
       </div>
 
-      <div id="dirty-indicator" class="saved">
+      <div id="dirty-indicator" class="saved" aria-live="polite">
         <!-- 03 Vol de Nuit：儀表指針（dirty 時指針下垂變金） -->
         <svg class="save-dial" viewBox="0 0 28 28" width="24" height="24" aria-hidden="true">
           <circle cx="14" cy="14" r="11.5" class="dial-face" />

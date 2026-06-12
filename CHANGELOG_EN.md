@@ -4,6 +4,21 @@
 
 This file tracks notable changes to Plume. Format inspired by [Keep a Changelog](https://keepachangelog.com); versions follow [SemVer](https://semver.org).
 
+## [0.2.1] - 2026-06-12
+
+### Fixed
+
+- Opening a file no longer leaves the preview stuck at the previous file's scroll position — previously, scrolling the preview to the bottom and then opening another file kept the new file's preview pinned to the bottom
+
+### Security
+
+- The exported HTML `<title>` is now escaped: it was the one interpolation point that bypassed sanitization. Impact is limited (the exported file opens in an external browser and can't reach the app's IPC), but it restores the "every output is sanitized" guarantee
+
+### Accessibility
+
+- Status-bar gauges (characters / lines / render time) and the unsaved indicator now expose screen-reader labels
+- Inkstone active-line text contrast nudged to meet WCAG AA (it dipped just below the threshold at the darkest part of the active line)
+
 ## [0.2.0] - 2026-06-12
 
 ### Added

@@ -267,9 +267,11 @@ html[data-theme="vol-de-nuit"] #editor .cm-cursor {
   border-left-color: var(--accent);
 }
 
-/* 05：游標行一抹極淡墨暈（非實色條）+ 焦墨 caret */
+/* 05：游標行一抹極淡墨暈（非實色條）+ 焦墨 caret
+   opacity 0.04（非 0.07）：0.07 疊上宣紙底，行首最暗處 --fg-muted 對比掉到 4.37:1（< AA 4.5），
+   0.04 回到 4.64:1（A11y Issue 3 複驗）。肉眼幾乎無差，僅讓邊際對比過關。 */
 html[data-theme="inkstone"] #editor .cm-activeLine {
-  background: radial-gradient(ellipse 58% 170% at 12% 50%, rgba(31, 29, 26, 0.07), transparent 72%);
+  background: radial-gradient(ellipse 58% 170% at 12% 50%, rgba(31, 29, 26, 0.04), transparent 72%);
 }
 
 html[data-theme="inkstone"] #editor .cm-cursor {
