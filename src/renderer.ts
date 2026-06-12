@@ -69,3 +69,11 @@ const md: MarkdownIt = new MarkdownIt("default", {
 export function render(source: string): string {
   return DOMPurify.sanitize(md.render(source));
 }
+
+/**
+ * 轉義純文字以便安全插入 HTML 屬性/標籤內容（如匯出 HTML 的 <title>）。
+ * 複用 markdown-it 的 escapeHtml，使全專案的 HTML 轉義走單一實作。
+ */
+export function escapeHtml(text: string): string {
+  return md.utils.escapeHtml(text);
+}

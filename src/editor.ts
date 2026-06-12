@@ -43,6 +43,11 @@ export function getScrollDOM(): HTMLElement {
 export function setContent(text: string): void {
   view!.dispatch({
     changes: { from: 0, to: view!.state.doc.length, insert: text },
+    // 開檔/新檔帶回開頭：不置頂的話會沿用前一檔的捲動量，換內容時 .cm-scroller 被
+    // clamp 觸發 scroll 事件 → 預覽同步捲動的 ratio 失真成 ~1，把預覽推到文件底
+    // （開檔後預覽跳到尾端的根因）。scrollIntoView 置頂後 ratio=0，預覽同步回頂。
+    selection: { anchor: 0 },
+    scrollIntoView: true,
   });
 }
 

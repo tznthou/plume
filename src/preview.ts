@@ -3,6 +3,15 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 
 let container: HTMLElement | null = null;
 
+// 開檔/新檔旗標：換 innerHTML 時瀏覽器會保留舊 scrollTop，若前一個檔的預覽被捲到底，
+// 新檔渲染後會殘留在底（甚至被 clamp 到新檔底部）。開檔時設旗標，下次 update 後回頂。
+// 不在每次 update 無條件回頂——那會害正常編輯打字時預覽一直跳回頂端。
+let resetScrollOnUpdate = false;
+
+export function scrollToTopOnNextUpdate(): void {
+  resetScrollOnUpdate = true;
+}
+
 export function initPreview(el: HTMLElement, editorScroller: HTMLElement): void {
   container = el;
 
@@ -36,6 +45,10 @@ export function initPreview(el: HTMLElement, editorScroller: HTMLElement): void 
 
 export function update(html: string): void {
   container!.innerHTML = html;
+  if (resetScrollOnUpdate) {
+    container!.scrollTop = 0; // 必在 innerHTML 之後：換內容當下瀏覽器才會套用捲動量
+    resetScrollOnUpdate = false;
+  }
 }
 
 // SPEC 錯誤處理標準：渲染例外時預覽顯示錯誤帶。textContent 寫入，錯誤訊息不走 HTML。

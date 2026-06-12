@@ -74,4 +74,16 @@ describe("export", () => {
     expect(html).not.toContain("<script>"); // sanitize 不可被匯出繞過
     expect(html).not.toContain("onerror");
   });
+
+  it("test_export_buildHtml_titleEscaped", async () => {
+    const file = await loadFileModule();
+    // 檔名可能來自外部來源（開啟他人提供的檔案），title 是唯一非 render 的插值點，
+    // 必須與 body 一樣不可被注入（L01 縱深防禦）。
+    const html = file.buildExportHtml(
+      "evil</title><script>alert(1)</script>.md",
+      "<p>body</p>",
+    );
+    expect(html).not.toContain("</title><script>"); // 未轉義會破出 title 注入 script
+    expect(html).toContain("&lt;/title&gt;&lt;script&gt;"); // 轉義後為純文字
+  });
 });

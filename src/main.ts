@@ -1,7 +1,7 @@
 // 組裝：editor docChanged → debounce 50ms → render → preview（SPEC「渲染管線規格」，
 // 同步呼叫鏈、無 async）；檔案操作接線與快捷鍵（Task 4）；最近檔案下拉（Task 6）。
 import { getContent, getLineCount, getScrollDOM, initEditor, onChange } from "./editor";
-import { initPreview, showError, update } from "./preview";
+import { initPreview, scrollToTopOnNextUpdate, showError, update } from "./preview";
 import { render } from "./renderer";
 import {
   exportHtml,
@@ -9,6 +9,7 @@ import {
   markDirty,
   newFile,
   onDirtyChange,
+  onLoad,
   openFile,
   openRecent,
   saveAs,
@@ -25,6 +26,7 @@ initEditor(editorEl);
 initPreview(previewEl, getScrollDOM());
 initStatusbar();
 onDirtyChange(setDirty); // dirty 指示：03 指針垂落 / 05 硃砂印
+onLoad(scrollToTopOnNextUpdate); // 開檔/新檔：預覽回頂（避免沿用前一檔被捲到底的位置）
 void initTheme(); // index.html 已帶預設主題，這裡載入使用者上次選擇
 
 let debounceTimer: number | undefined;

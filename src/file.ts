@@ -6,7 +6,7 @@ import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import hljsThemeCss from "highlight.js/styles/github.css?raw";
 import { getContent, setContent } from "./editor";
-import { render } from "./renderer";
+import { escapeHtml, render } from "./renderer";
 import { addRecent, removeRecent } from "./recent";
 
 interface DocState {
@@ -39,6 +39,14 @@ export function onDirtyChange(cb: (dirty: boolean) => void): void {
   dirtyListener = cb;
 }
 
+// 開檔/新檔通知（main 接到後讓預覽下次渲染回頂）。沿用 onDirtyChange 的 callback 模式，
+// 不讓 file 狀態層直接相依 preview 視圖層。
+let loadListener: (() => void) | null = null;
+
+export function onLoad(cb: () => void): void {
+  loadListener = cb;
+}
+
 async function updateTitle(): Promise<void> {
   dirtyListener?.(doc.dirty);
   await getCurrentWindow().setTitle(`${fileName()}${doc.dirty ? " ●" : ""}`);
@@ -57,6 +65,7 @@ function loadContent(text: string): void {
   } finally {
     suppressDirty = false;
   }
+  loadListener?.(); // 開檔/新檔：通知預覽下次渲染回頂（preview 換 innerHTML 會殘留舊捲動位置）
 }
 
 // dirty 確認流程，新增/開啟/關閉共用。回傳 true = 可以繼續（已存或使用者同意放棄）。
@@ -186,7 +195,7 @@ export function buildExportHtml(title: string, bodyHtml: string): string {
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>${title}</title>
+<title>${escapeHtml(title)}</title>
 <style>
 ${EXPORT_TYPOGRAPHY_CSS}
 ${hljsThemeCss}
