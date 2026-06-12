@@ -1,4 +1,4 @@
-# 打 tag（v*）觸發三平台打包，產物上傳到 GitHub Release（draft，手動發布）。
+# 打 tag（v*）觸發三平台打包，產物上傳到 GitHub Release。三平台 build 全綠後 publish job 自動轉正式發布（任一平台失敗則留 draft）。
 # 簽章現況：macOS ad-hoc / Windows 未簽——自用與小範圍分發 OK，
 # 安裝時 macOS 需右鍵開啟（或 xattr -dc）、Windows 會見 SmartScreen 提示。
 name: Release
@@ -68,3 +68,17 @@ jobs:
           releaseName: "Plume ${{ github.ref_name }}"
           releaseDraft: true
           args: ${{ matrix.args }}
+
+  # 三平台 build 全數成功後自動把 draft 轉為正式發布。needs: build 確保產物齊全才公開，
+  # 避免單純關掉 draft 時，第一個完成的平台搶先公開、其餘平台檔案還沒上傳的空窗。
+  # 任一平台 build 失敗則此 job 不執行，release 留在 draft（安全）。
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Un-draft release once all platforms are uploaded
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --draft=false --repo "${{ github.repository }}"
