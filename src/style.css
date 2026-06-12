@@ -857,6 +857,46 @@ html[data-theme="inkstone"] #dirty-indicator.dirty .seal {
   transform: scale(1.04);
 }
 
+/* ===== 夜航浮飾：郵務機 + 守夜狐（與 mockup 03 同款參數） ===== */
+
+main {
+  position: relative;
+}
+
+#illos img {
+  display: none;
+  position: absolute;
+  pointer-events: none; /* 純裝飾，滑鼠事件全穿透 */
+  z-index: 5;
+}
+
+html[data-theme="vol-de-nuit"] #illos img {
+  display: block;
+}
+
+.illo-biplane {
+  width: 200px;
+  right: 28px;
+  top: 16px;
+  opacity: 0.92;
+  filter: drop-shadow(0 0 14px rgba(127, 209, 201, 0.15));
+  animation: drift 7s ease-in-out infinite alternate;
+}
+
+.illo-fox {
+  width: 112px;
+  right: calc(50% + 16px);
+  bottom: 14px;
+  opacity: 0.9;
+  filter: drop-shadow(0 0 12px rgba(232, 184, 75, 0.12));
+}
+
+@keyframes drift {
+  to {
+    transform: translateY(7px) rotate(0.4deg);
+  }
+}
+
 /* ===== 入場（最簡版：雙欄淡入） ===== */
 
 @keyframes pane-in {
