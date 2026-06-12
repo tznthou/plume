@@ -1,9 +1,17 @@
 <!doctype html>
-<html lang="zh-Hant">
+<!-- data-theme 直接寫死預設：store 載入是 async，避免首幀無主題的閃爍 -->
+<html lang="zh-Hant" data-theme="vol-de-nuit">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Plume</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- 兩主題字體一次載：離線時 fallback 系統字，功能不受影響 -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,400&family=Noto+Serif+TC:wght@400;600;700&family=Space+Mono:wght@400;700&family=Martian+Mono:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="/src/style.css" />
     <script type="module" src="/src/main.ts" defer></script>
   </head>
@@ -14,6 +22,10 @@
       <button id="btn-open" type="button">開啟</button>
       <button id="btn-save" type="button">儲存</button>
       <button id="btn-export" type="button">匯出</button>
+      <button id="btn-theme" type="button" aria-label="切換佈景主題">
+        <!-- 文字由 CSS 依 data-theme 切換：夜航 / 硯墨 -->
+        <span class="theme-name" aria-hidden="true"></span>
+      </button>
       <select id="recent-list" aria-label="最近檔案">
         <option value="" selected disabled>最近檔案</option>
       </select>
@@ -23,5 +35,45 @@
       <div id="editor"></div>
       <div id="preview"></div>
     </main>
+
+    <footer id="statusbar">
+      <div class="gauges">
+        <!-- g-label 文字由 CSS 依主題切換：03 儀表縮寫 / 05 中文 -->
+        <span class="gauge"
+          ><span class="g-label" data-vol="ALT" data-ink="字數"></span
+          ><span class="g-num" id="stat-chars">0</span><span class="g-unit">字</span></span
+        >
+        <span class="ticks" aria-hidden="true"></span>
+        <span class="gauge"
+          ><span class="g-label" data-vol="HDG" data-ink="行數"></span
+          ><span class="g-num" id="stat-lines">1</span><span class="g-unit">行</span></span
+        >
+        <span class="ticks" aria-hidden="true"></span>
+        <span class="gauge"
+          ><span class="g-label" data-vol="ETA" data-ink="渲染"></span
+          ><span class="g-num" id="stat-ms">0</span><span class="g-unit">ms</span></span
+        >
+      </div>
+
+      <div id="dirty-indicator" class="saved">
+        <!-- 03 Vol de Nuit：儀表指針（dirty 時指針下垂變金） -->
+        <svg class="save-dial" viewBox="0 0 28 28" width="24" height="24" aria-hidden="true">
+          <circle cx="14" cy="14" r="11.5" class="dial-face" />
+          <line x1="3.5" y1="14" x2="6" y2="14" class="dial-tick" />
+          <line x1="14" y1="3.5" x2="14" y2="6" class="dial-tick" />
+          <line x1="21.4" y1="6.6" x2="19.7" y2="8.3" class="dial-tick-gold" />
+          <g class="needle">
+            <line x1="14" y1="14" x2="19" y2="9" class="needle-line" />
+          </g>
+          <circle cx="14" cy="14" r="1.6" class="dial-hub" />
+        </svg>
+        <!-- 05 Inkstone：硃砂印（dirty 時實印「未存」，儲存後淡去） -->
+        <svg class="seal" viewBox="0 0 30 30" width="22" height="22" aria-hidden="true">
+          <rect x="1.5" y="1.5" width="27" height="27" rx="3" class="seal-frame" />
+          <text x="15" y="20.5" text-anchor="middle" class="seal-text">未存</text>
+        </svg>
+        <span class="save-text" id="save-text">已儲存</span>
+      </div>
+    </footer>
   </body>
 </html>

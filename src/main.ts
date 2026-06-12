@@ -1,6 +1,6 @@
 // 組裝：editor docChanged → debounce 50ms → render → preview（SPEC「渲染管線規格」，
 // 同步呼叫鏈、無 async）；檔案操作接線與快捷鍵（Task 4）；最近檔案下拉（Task 6）。
-import { getContent, getScrollDOM, initEditor, onChange } from "./editor";
+import { getContent, getLineCount, getScrollDOM, initEditor, onChange } from "./editor";
 import { initPreview, showError, update } from "./preview";
 import { render } from "./renderer";
 import {
@@ -8,18 +8,24 @@ import {
   initFileModule,
   markDirty,
   newFile,
+  onDirtyChange,
   openFile,
   openRecent,
   saveAs,
   saveFile,
 } from "./file";
 import { getRecent } from "./recent";
+import { initTheme, toggleTheme } from "./theme";
+import { initStatusbar, setDirty, updateStats } from "./statusbar";
 
 const editorEl = document.querySelector<HTMLElement>("#editor")!;
 const previewEl = document.querySelector<HTMLElement>("#preview")!;
 
 initEditor(editorEl);
 initPreview(previewEl, getScrollDOM());
+initStatusbar();
+onDirtyChange(setDirty); // dirty 指示：03 指針垂落 / 05 硃砂印
+void initTheme(); // index.html 已帶預設主題，這裡載入使用者上次選擇
 
 let debounceTimer: number | undefined;
 onChange(() => {
@@ -27,7 +33,14 @@ onChange(() => {
   window.clearTimeout(debounceTimer);
   debounceTimer = window.setTimeout(() => {
     try {
-      update(render(getContent()));
+      const content = getContent();
+      const t0 = performance.now();
+      update(render(content));
+      updateStats({
+        chars: content.replace(/\s/g, "").length, // 寫作直覺的「字數」：不含空白換行
+        lines: getLineCount(),
+        ms: Math.max(1, Math.round(performance.now() - t0)), // ETA 儀表讀數 = 真渲染耗時
+      });
     } catch (e) {
       // SPEC 錯誤處理標準：編輯區不受影響；debounce 每次輸入重跑 render，天然自動重試
       showError(`渲染發生錯誤（下次輸入會自動重試）：${String(e)}`);
@@ -73,6 +86,7 @@ document.querySelector("#btn-new")!.addEventListener("click", doNew);
 document.querySelector("#btn-open")!.addEventListener("click", doOpen);
 document.querySelector("#btn-save")!.addEventListener("click", doSave);
 document.querySelector("#btn-export")!.addEventListener("click", () => void exportHtml());
+document.querySelector("#btn-theme")!.addEventListener("click", () => void toggleTheme());
 
 // ----- 快捷鍵 Cmd(mac)/Ctrl(win) + N / O / S / Shift+S -----
 

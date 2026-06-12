@@ -31,7 +31,16 @@ function fileName(): string {
   return doc.path.split(/[/\\]/).pop() ?? doc.path; // Windows 路徑為反斜線
 }
 
+// dirty 變化匯流點是 updateTitle（markDirty/newFile/loadPath/writeTo 都經過），
+// 狀態列訂閱於此，不另開通知路徑
+let dirtyListener: ((dirty: boolean) => void) | null = null;
+
+export function onDirtyChange(cb: (dirty: boolean) => void): void {
+  dirtyListener = cb;
+}
+
 async function updateTitle(): Promise<void> {
+  dirtyListener?.(doc.dirty);
   await getCurrentWindow().setTitle(`${fileName()}${doc.dirty ? " ●" : ""}`);
 }
 

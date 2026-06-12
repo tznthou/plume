@@ -105,7 +105,7 @@ interface RecentStore {
 | 防線 | 實作 |
 |------|------|
 | 輸出消毒 | 所有 `render()` 輸出必過 DOMPurify，預設白名單，此環節**不可被任何功能繞過**（含匯出 HTML） |
-| CSP | `tauri.conf.json` 設定：`default-src 'self'; img-src 'self' asset: https: data:; style-src 'self' 'unsafe-inline'`；不允許遠端 script |
+| CSP | `tauri.conf.json` 設定：`default-src 'self'; img-src 'self' asset: https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com`；不允許遠端 script。style/font 僅白名單 Google Fonts 兩域（主題字體），script-src 仍鎖 'self' |
 | 權限最小化 | capabilities 僅宣告上表權限；fs scope 不開全域路徑 |
 | 連結外開 | 預覽區連結一律 opener 走系統瀏覽器，webview 不導航至外部 URL |
 

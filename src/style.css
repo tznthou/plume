@@ -1,4 +1,42 @@
-@import "highlight.js/styles/github.css";
+/* =====================================================================
+   Plume 雙佈景主題
+   03 Vol de Nuit 夜航儀表（預設・深）/ 05 Inkstone 硯墨五階（淺）
+   機制：html[data-theme] 切換變數組，元件規則吃變數；
+   主題特異質感（儀表屏/宣紙噪點…）以 [data-theme] scope 覆寫。
+   ===================================================================== */
+
+/* ===== 主題變數 ===== */
+
+html[data-theme="vol-de-nuit"] {
+  --bg: #14161f; /* 夜空 */
+  --bg-panel: #1b1e2b; /* 儀表面板 */
+  --bg-inset: #10131d; /* 內凹顯示屏 */
+  --fg: #e6e9f0; /* 月白 */
+  --fg-strong: #e6e9f0;
+  --fg-muted: #8a93ad; /* 霧藍 */
+  --accent: #e8b84b; /* 儀表金 */
+  --accent-2: #7fd1c9; /* 星光青 */
+  --line: #2a2f42;
+  --font-ui: "JetBrains Mono", ui-monospace, monospace;
+  --font-edit: "JetBrains Mono", ui-monospace, "Noto Sans TC", monospace;
+  --font-preview: "Literata", "Noto Serif TC", serif;
+}
+
+html[data-theme="inkstone"] {
+  --bg: #f5f2eb; /* 宣紙 */
+  --bg-panel: #f5f2eb;
+  --bg-inset: rgba(214, 209, 196, 0.32);
+  --fg: #1f1d1a; /* 焦墨 */
+  --fg-strong: #3d3a33; /* 濃墨 */
+  --fg-muted: #6b675e; /* 重墨 */
+  --accent: #3d3a33; /* 強調用墨——硃砂只留給印章 */
+  --accent-2: #6b675e;
+  --line: #d6d1c4; /* 清墨 */
+  --cinnabar: #b3402a;
+  --font-ui: "Space Mono", "Noto Sans TC", monospace;
+  --font-edit: "Martian Mono", "Noto Sans TC", monospace;
+  --font-preview: "Noto Sans TC", "PingFang TC", sans-serif;
+}
 
 /* ===== Base ===== */
 
@@ -17,10 +55,35 @@ body {
 body {
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #1f2328;
-  background: #ffffff;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
+}
+
+/* 03：夜空極稀疏星點 */
+html[data-theme="vol-de-nuit"] body {
+  background:
+    radial-gradient(1.5px 1.5px at 78% 3%, rgba(230, 233, 240, 0.55), transparent 60%),
+    radial-gradient(1px 1px at 22% 5%, rgba(230, 233, 240, 0.35), transparent 60%),
+    radial-gradient(1px 1px at 60% 97%, rgba(230, 233, 240, 0.28), transparent 60%),
+    var(--bg);
+}
+
+/* 05：宣紙微噪點蓋整窗（feTurbulence data URI，非外部資源） */
+html[data-theme="inkstone"] body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' seed='6'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.13 0 0 0 0 0.12 0 0 0 0 0.10 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 60;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ===== Toolbar ===== */
@@ -31,40 +94,94 @@ body {
   flex-shrink: 0;
   gap: 8px;
   padding: 8px 12px;
-  background: #f6f6f6;
-  border-bottom: 1px solid #d9d9d9;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
   user-select: none;
   -webkit-user-select: none;
 }
 
+/* 05：墨暈代框線 */
+html[data-theme="inkstone"] #toolbar {
+  background: #f1ede3;
+  border-bottom: none;
+  box-shadow: 0 12px 26px -18px rgba(31, 29, 26, 0.35);
+  position: relative;
+  z-index: 2;
+}
+
 #toolbar button {
-  padding: 4px 14px;
+  padding: 6px 12px;
   font: inherit;
-  font-size: 13px;
-  color: #1f2328;
-  background: #ffffff;
-  border: 1px solid #c8c8c8;
+  font-size: 12.5px;
+  color: var(--fg);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
   border-radius: 6px;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    color 0.2s,
+    background 0.22s,
+    transform 0.08s;
 }
 
 #toolbar button:hover {
-  background: #f2f2f2;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  color: var(--accent);
+}
+
+/* 03：hover 金光暈 */
+html[data-theme="vol-de-nuit"] #toolbar button:hover {
+  box-shadow: 0 0 10px rgba(232, 184, 75, 0.22);
+}
+
+/* 05：按鈕無框，hover 淡墨暈浮現 */
+html[data-theme="inkstone"] #toolbar button {
+  background: transparent;
+  border-color: transparent;
+  color: var(--fg-muted);
+  letter-spacing: 0.08em;
+}
+
+html[data-theme="inkstone"] #toolbar button:hover {
+  color: var(--fg);
+  background: radial-gradient(
+    ellipse at 50% 60%,
+    rgba(31, 29, 26, 0.09),
+    rgba(31, 29, 26, 0.02) 70%,
+    transparent
+  );
 }
 
 #toolbar button:active {
-  background: #e6e6e6;
+  transform: scale(0.98);
+}
+
+/* 主題切換鈕：顯示當前主題名，文字由 data-theme 決定 */
+html[data-theme="vol-de-nuit"] #btn-theme .theme-name::before {
+  content: "夜航";
+}
+
+html[data-theme="inkstone"] #btn-theme .theme-name::before {
+  content: "硯墨";
 }
 
 #recent-list {
   margin-left: auto;
   max-width: 220px;
-  padding: 4px 8px;
+  padding: 5px 8px;
   font: inherit;
-  font-size: 13px;
-  color: #1f2328;
-  background: #ffffff;
-  border: 1px solid #c8c8c8;
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
   border-radius: 6px;
+}
+
+html[data-theme="inkstone"] #recent-list {
+  background: transparent;
+  border-color: transparent;
 }
 
 /* ===== Main：編輯/預覽左右各半 ===== */
@@ -80,36 +197,169 @@ main {
   flex: 1 1 50%;
   min-width: 0;
   overflow: auto;
+  background: var(--bg-panel);
+}
+
+/* 03：玻璃儀表面——頂緣微高光 + 極淡內陰影 */
+html[data-theme="vol-de-nuit"] #editor,
+html[data-theme="vol-de-nuit"] #preview {
+  box-shadow:
+    inset 0 1px 0 rgba(230, 233, 240, 0.03),
+    inset 0 2px 18px rgba(0, 0, 0, 0.22);
 }
 
 #editor {
-  border-right: 1px solid #d9d9d9;
+  border-right: 1px solid var(--line);
   overflow: hidden; /* 捲動交給 CM6 的 .cm-scroller */
 }
 
-/* ===== CM6 編輯器整合 ===== */
+/* 05：欄界不用實線，右緣墨暈代界 */
+html[data-theme="inkstone"] #editor {
+  border-right: none;
+  box-shadow: 20px 0 38px -28px rgba(31, 29, 26, 0.2);
+}
+
+/* ===== CM6 編輯器整合（chrome 主題化：#editor 提升 specificity 蓋過 CM6 注入樣式） ===== */
 
 #editor .cm-editor {
   height: 100%;
+  background: transparent;
+  color: var(--fg);
 }
 
-/* pane 捲到底時不把捲動外溢給 root（同樣會引發 rubber-band 白邊） */
 #editor .cm-scroller,
 #preview {
+  /* pane 捲到底時不把捲動外溢給 root（同樣會引發 rubber-band 白邊） */
   overscroll-behavior: none;
+}
+
+#editor .cm-scroller {
+  font-family: var(--font-edit);
+  font-variant-ligatures: none; /* 防連字黏壞 |---| 表格管線 */
+  line-height: 1.75;
 }
 
 #editor .cm-editor.cm-focused {
   outline: none; /* 全高 pane 上的預設 focus 框是視覺干擾 */
 }
 
-/* ===== 預覽區 GitHub 風 typography（一律 scope 在 #preview 之下） ===== */
+#editor .cm-gutters {
+  background: transparent;
+  border-right: 1px solid var(--line);
+  color: var(--fg-muted);
+}
+
+#editor .cm-activeLineGutter {
+  background: transparent;
+  color: var(--accent);
+}
+
+#editor .cm-activeLine {
+  background: transparent;
+}
+
+/* 03：游標行淡金染 + 金 caret */
+html[data-theme="vol-de-nuit"] #editor .cm-activeLine {
+  background: rgba(232, 184, 75, 0.055);
+}
+
+html[data-theme="vol-de-nuit"] #editor .cm-cursor {
+  border-left-color: var(--accent);
+}
+
+/* 05：游標行一抹極淡墨暈（非實色條）+ 焦墨 caret */
+html[data-theme="inkstone"] #editor .cm-activeLine {
+  background: radial-gradient(ellipse 58% 170% at 12% 50%, rgba(31, 29, 26, 0.07), transparent 72%);
+}
+
+html[data-theme="inkstone"] #editor .cm-cursor {
+  border-left-color: var(--fg);
+}
+
+#editor .cm-selectionBackground,
+#editor .cm-editor ::selection {
+  background: color-mix(in srgb, var(--accent-2) 24%, transparent) !important;
+}
+
+/* --- 編輯區 markdown 語法色（classHighlighter 的 .tok-*；#editor 確保贏過
+       basicSetup 內建 defaultHighlightStyle 的單 class 規則） --- */
+
+#editor .tok-heading {
+  color: var(--fg-strong);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+#editor .tok-strong {
+  font-weight: 700;
+}
+
+#editor .tok-emphasis {
+  font-style: italic;
+}
+
+#editor .tok-quote {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+#editor .tok-link,
+#editor .tok-url {
+  color: var(--accent-2);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+html[data-theme="inkstone"] #editor .tok-link,
+html[data-theme="inkstone"] #editor .tok-url {
+  color: var(--fg-strong);
+}
+
+#editor .tok-monospace {
+  color: var(--accent-2);
+}
+
+html[data-theme="inkstone"] #editor .tok-monospace {
+  color: var(--fg-strong);
+}
+
+#editor .tok-meta,
+#editor .tok-processingInstruction,
+#editor .tok-punctuation {
+  color: var(--fg-muted);
+}
+
+#editor .tok-labelName,
+#editor .tok-string {
+  color: var(--accent-2);
+}
+
+#editor .tok-number {
+  color: var(--accent);
+}
+
+#editor .tok-comment {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+#editor .tok-keyword {
+  color: var(--accent-2);
+}
+
+/* ===== 預覽區 typography（一律 scope 在 #preview 之下） ===== */
 
 #preview {
-  padding: 24px 32px;
-  font-size: 16px;
-  line-height: 1.6;
+  padding: 28px 34px 44px;
+  font-family: var(--font-preview);
+  font-size: 15.5px;
+  line-height: 1.85;
   word-wrap: break-word;
+}
+
+html[data-theme="inkstone"] #preview {
+  box-shadow: -20px 0 38px -28px rgba(31, 29, 26, 0.15); /* 左緣墨暈代界 */
+  line-height: 2.05;
 }
 
 #preview > :first-child {
@@ -122,39 +372,52 @@ main {
 #preview h4,
 #preview h5,
 #preview h6 {
-  margin-top: 24px;
-  margin-bottom: 16px;
-  font-weight: 600;
-  line-height: 1.25;
+  margin-top: 1.8em;
+  margin-bottom: 0.7em;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--fg-strong);
 }
 
 #preview h1 {
-  font-size: 2em;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid #d1d9e0;
+  font-size: 1.8em;
+  letter-spacing: 0.02em;
+  padding-bottom: 0.45em;
+  border-bottom: 1px solid var(--line);
+}
+
+html[data-theme="inkstone"] #preview h1 {
+  letter-spacing: 0.06em;
 }
 
 #preview h2 {
-  font-size: 1.5em;
-  padding-bottom: 0.3em;
-  border-bottom: 1px solid #d1d9e0;
-}
-
-#preview h3 {
   font-size: 1.25em;
 }
 
-#preview h4 {
-  font-size: 1em;
+/* 03：h2 前置星光青短橫 */
+html[data-theme="vol-de-nuit"] #preview h2::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 1px;
+  background: var(--accent-2);
+  opacity: 0.75;
+  margin-right: 10px;
+  vertical-align: middle;
 }
 
-#preview h5 {
-  font-size: 0.875em;
+html[data-theme="inkstone"] #preview h2 {
+  letter-spacing: 0.1em;
 }
 
+#preview h3 {
+  font-size: 1.1em;
+}
+
+#preview h4,
+#preview h5,
 #preview h6 {
-  font-size: 0.85em;
-  color: #59636e;
+  font-size: 1em;
 }
 
 #preview p,
@@ -165,22 +428,65 @@ main {
 #preview table,
 #preview pre {
   margin-top: 0;
-  margin-bottom: 16px;
+  margin-bottom: 1em;
 }
 
 #preview a {
-  color: #0969da;
-  text-decoration: none;
+  color: var(--accent-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.18s;
 }
 
 #preview a:hover {
-  text-decoration: underline;
+  color: var(--accent);
 }
 
+/* 05：連結走墨色細底線 */
+html[data-theme="inkstone"] #preview a {
+  color: var(--fg-strong);
+  text-decoration: none;
+  border-bottom: 1px solid var(--fg-muted);
+  padding-bottom: 1px;
+}
+
+html[data-theme="inkstone"] #preview a:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+  background: rgba(31, 29, 26, 0.045);
+}
+
+/* 03：blockquote 星光青左框 + 微底 */
 #preview blockquote {
-  padding: 0 1em;
-  color: #59636e;
-  border-left: 0.25em solid #d1d9e0;
+  border-left: 3px solid var(--accent-2);
+  background: color-mix(in srgb, var(--accent-2) 5%, transparent);
+  padding: 0.55em 1.1em;
+  margin-left: 0;
+  margin-right: 0;
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+/* 05：blockquote 不用框線——縮進 + 微縮 + 前置全形引號 */
+html[data-theme="inkstone"] #preview blockquote {
+  border-left: none;
+  background: none;
+  position: relative;
+  margin-left: 2.8em;
+  padding: 0;
+  font-size: 0.93em;
+  font-style: normal;
+  color: var(--fg-strong);
+}
+
+html[data-theme="inkstone"] #preview blockquote::before {
+  content: "『";
+  position: absolute;
+  left: -1.45em;
+  top: -0.42em;
+  font-size: 2.3em;
+  line-height: 1;
+  color: #a8a399;
 }
 
 #preview ul,
@@ -197,10 +503,10 @@ main {
 }
 
 #preview hr {
-  height: 0.25em;
+  height: 1px;
   margin: 24px 0;
   padding: 0;
-  background: #d1d9e0;
+  background: var(--line);
   border: 0;
 }
 
@@ -208,32 +514,107 @@ main {
 
 #preview code,
 #preview pre {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
-    "Liberation Mono", monospace;
+  font-family: var(--font-edit);
 }
 
 #preview code {
   padding: 0.2em 0.4em;
   font-size: 85%;
-  background: rgba(175, 184, 193, 0.2);
+  background: var(--bg-inset);
   border-radius: 6px;
+  color: var(--accent-2);
+}
+
+html[data-theme="inkstone"] #preview code {
+  color: var(--fg-strong);
 }
 
 #preview pre {
-  padding: 16px;
+  padding: 14px 18px;
   overflow: auto;
-  font-size: 85%;
-  line-height: 1.45;
-  background: #f6f8fa;
-  border-radius: 6px;
+  font-size: 81%;
+  line-height: 1.8;
+  background: var(--bg-inset);
+  border-radius: 8px;
 }
 
-/* 蓋掉 hljs 主題的 padding/背景，底色統一交給 pre */
+/* 03：pre = 內凹儀表顯示屏 */
+html[data-theme="vol-de-nuit"] #preview pre {
+  box-shadow:
+    inset 0 2px 10px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(127, 209, 201, 0.14),
+    0 0 16px rgba(127, 209, 201, 0.05);
+}
+
+html[data-theme="inkstone"] #preview pre {
+  box-shadow: inset 0 0 26px rgba(31, 29, 26, 0.03);
+}
+
+/* 蓋掉 padding/背景，底色統一交給 pre */
 #preview pre code {
   padding: 0;
   font-size: 100%;
   background: transparent;
   border-radius: 0;
+  color: var(--fg);
+  font-variant-ligatures: none;
+}
+
+/* ----- hljs token（自寫，吃主題變數；app 內不再用 github.css，匯出模板另走 ?raw 不受影響） ----- */
+
+#preview .hljs-keyword,
+#preview .hljs-built_in,
+#preview .hljs-literal,
+#preview .hljs-type {
+  color: var(--accent-2);
+}
+
+#preview .hljs-title,
+#preview .hljs-title.function_,
+#preview .hljs-title.class_ {
+  color: var(--accent-2);
+}
+
+#preview .hljs-string,
+#preview .hljs-regexp {
+  color: var(--accent);
+}
+
+#preview .hljs-number {
+  color: var(--accent);
+}
+
+#preview .hljs-comment {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+#preview .hljs-attr,
+#preview .hljs-variable,
+#preview .hljs-params {
+  color: var(--fg);
+}
+
+/* 05：墨階分層——彩色歸零，靠深淺與字重 */
+html[data-theme="inkstone"] #preview .hljs-keyword,
+html[data-theme="inkstone"] #preview .hljs-built_in,
+html[data-theme="inkstone"] #preview .hljs-literal,
+html[data-theme="inkstone"] #preview .hljs-type,
+html[data-theme="inkstone"] #preview .hljs-title,
+html[data-theme="inkstone"] #preview .hljs-title.function_,
+html[data-theme="inkstone"] #preview .hljs-title.class_ {
+  color: var(--fg-strong);
+  font-weight: 600;
+}
+
+html[data-theme="inkstone"] #preview .hljs-string,
+html[data-theme="inkstone"] #preview .hljs-regexp {
+  color: var(--fg-muted);
+}
+
+html[data-theme="inkstone"] #preview .hljs-number {
+  color: var(--fg);
+  font-weight: 700;
 }
 
 /* ----- 表格 ----- */
@@ -246,18 +627,37 @@ main {
   border-spacing: 0;
 }
 
-#preview th,
-#preview td {
-  padding: 6px 13px;
-  border: 1px solid #d1d9e0;
+/* 03：航班時刻表——th 等寬字寬字距，僅橫線 */
+#preview th {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  color: var(--fg-muted);
+  text-align: left;
+  padding: 9px 12px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
-#preview th {
-  font-weight: 600;
+#preview td {
+  padding: 9px 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+}
+
+/* 05：文人帳簿——th 回正常字體字距 */
+html[data-theme="inkstone"] #preview th {
+  font-family: var(--font-preview);
+  font-size: 0.95em;
+  font-weight: 700;
+  letter-spacing: normal;
+  color: var(--fg-strong);
+  border-top: none;
+  border-bottom: 1px solid #a8a399;
 }
 
 #preview tbody tr:nth-child(2n) {
-  background: #f6f8fa;
+  background: transparent;
 }
 
 /* ----- 任務清單（markdown-it-task-lists） ----- */
@@ -269,4 +669,217 @@ main {
 #preview .task-list-item-checkbox {
   margin: 0 0.2em 0.25em -1.4em;
   vertical-align: middle;
+  accent-color: var(--accent);
+}
+
+/* 05：checkbox 勾是硃砂——唯一彩色之二 */
+html[data-theme="inkstone"] #preview .task-list-item-checkbox {
+  accent-color: var(--cinnabar);
+}
+
+/* ===== 狀態列 ===== */
+
+#statusbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 16px;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html[data-theme="inkstone"] #statusbar {
+  background: #f1ede3;
+  border-top: none;
+  box-shadow: 0 -12px 26px -18px rgba(31, 29, 26, 0.3);
+  position: relative;
+  z-index: 2;
+}
+
+.gauges {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gauge {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.g-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--fg-muted);
+}
+
+/* gauge 標籤文字依主題切換：03 儀表縮寫 / 05 中文 */
+html[data-theme="vol-de-nuit"] .g-label::before {
+  content: attr(data-vol);
+}
+
+html[data-theme="inkstone"] .g-label::before {
+  content: attr(data-ink);
+  letter-spacing: 0.1em;
+}
+
+.g-num {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+html[data-theme="inkstone"] .g-num {
+  color: var(--fg-strong);
+}
+
+.g-unit {
+  font-size: 10px;
+  color: var(--fg-muted);
+}
+
+.ticks {
+  width: 21px;
+  height: 10px;
+  opacity: 0.9;
+  background: repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 5px);
+}
+
+html[data-theme="inkstone"] .ticks {
+  background: none;
+  width: 8px;
+}
+
+/* ----- dirty 指示：03 儀表指針 / 05 硃砂印 ----- */
+
+#dirty-indicator {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.save-text {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--fg-muted);
+}
+
+#dirty-indicator.dirty .save-text {
+  color: var(--accent);
+}
+
+html[data-theme="inkstone"] #dirty-indicator.dirty .save-text {
+  color: var(--cinnabar);
+}
+
+/* 03 指針儀表：只在 vol-de-nuit 顯示 */
+.save-dial {
+  display: none;
+}
+
+html[data-theme="vol-de-nuit"] .save-dial {
+  display: block;
+}
+
+.save-dial .dial-face {
+  fill: var(--bg-inset);
+  stroke: var(--line);
+}
+
+.save-dial .dial-tick {
+  stroke: var(--fg-muted);
+  stroke-width: 1.2;
+}
+
+.save-dial .dial-tick-gold {
+  stroke: var(--accent);
+  stroke-width: 1.4;
+}
+
+.save-dial .needle-line {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.save-dial .dial-hub {
+  fill: var(--accent);
+}
+
+.save-dial .needle {
+  transform-origin: 14px 14px;
+  transition: transform 0.4s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+/* dirty：指針垂落到左下 */
+#dirty-indicator.dirty .save-dial .needle {
+  transform: rotate(-135deg);
+}
+
+/* 05 硃砂印：只在 inkstone 顯示；saved 時印淡去 */
+.seal {
+  display: none;
+}
+
+html[data-theme="inkstone"] .seal {
+  display: block;
+  transition:
+    opacity 0.3s,
+    transform 0.25s cubic-bezier(0.34, 1.45, 0.64, 1);
+}
+
+.seal .seal-frame {
+  fill: none;
+  stroke: var(--cinnabar);
+  stroke-width: 2;
+}
+
+.seal .seal-text {
+  fill: var(--cinnabar);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+html[data-theme="inkstone"] #dirty-indicator.saved .seal {
+  opacity: 0.22;
+}
+
+html[data-theme="inkstone"] #dirty-indicator.dirty .seal {
+  opacity: 1;
+  transform: scale(1.04);
+}
+
+/* ===== 入場（最簡版：雙欄淡入） ===== */
+
+@keyframes pane-in {
+  from {
+    opacity: 0;
+  }
+}
+
+#editor {
+  animation: pane-in 0.3s ease-out backwards;
+}
+
+#preview {
+  animation: pane-in 0.3s ease-out 0.1s backwards;
+}
+
+/* ===== 動效全關 ===== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
