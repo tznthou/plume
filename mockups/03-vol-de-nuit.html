@@ -230,10 +230,26 @@ td.ms  { font-family: var(--mono); font-size: 13px; color: var(--gold); }
 @keyframes sway { 0%, 100% { transform: rotate(-3.5deg); } 50% { transform: rotate(3.5deg); } }
 
 /* ===== 響應式:<900px 摺上下 ===== */
+/* 儀表罩玻璃上的浮飾:夜航郵務機 + 守夜狐(去背水彩) */
+.workspace { position: relative; }
+.illos { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.illos img { position: absolute; }
+.illo-biplane {
+  width: 200px; right: 28px; top: 16px; opacity: .92;
+  filter: drop-shadow(0 0 14px rgba(127,209,201,.15));
+  animation: drift 7s ease-in-out infinite alternate;
+}
+.illo-fox {
+  width: 112px; right: calc(50% + 16px); bottom: 14px; opacity: .9;
+  filter: drop-shadow(0 0 12px rgba(232,184,75,.12));
+}
+@keyframes drift { to { transform: translateY(7px) rotate(.4deg); } }
+
 @media (max-width: 900px) {
   .workspace { grid-template-columns: 1fr; grid-template-rows: minmax(0,1fr) 8px minmax(0,1fr); }
   .divider { cursor: row-resize; }
   .divider::before { width: 100%; height: 1px; }
+  .illos { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -330,6 +346,11 @@ td.ms  { font-family: var(--mono); font-size: 13px; color: var(--gold); }
 }));</code></pre>
       <p>羽毛筆時代,書寫是<a href="https://example.com">一種儀式</a>。</p>
     </section>
+
+    <div class="illos" aria-hidden="true">
+      <img class="illo-biplane" src="assets/biplane.webp" alt="">
+      <img class="illo-fox" src="assets/fox.webp" alt="">
+    </div>
 
   </main>
 

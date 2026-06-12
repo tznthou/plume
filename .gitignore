@@ -1,5 +1,6 @@
 # Claude Code 私有工作流（永不入 repo）
 .claude/
+.playwright-mcp/
 
 # 依賴與建置產物
 node_modules/
