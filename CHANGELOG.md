@@ -4,6 +4,22 @@
 
 本檔記錄 Plume 的版本變更。格式參考 [Keep a Changelog](https://keepachangelog.com)，版本號採 [SemVer](https://semver.org)。
 
+## [0.3.0] - 2026-06-13
+
+### 新增
+
+- 拖曳開檔：把 `.md` 拖進視窗就能直接開啟，拖曳中會有跟著佈景主題走的邊框提示（夜航是儀表金、硯墨是硃砂），有未存檔內容時會先問你要不要存
+- OS 檔案關聯：macOS 的 Finder 右鍵選「以 Plume 打開」或設為預設，就能雙擊 `.md` 直接開啟 Plume（Windows 同理）；app 執行中雙擊另一個 `.md` 也會在同一個視窗載入
+
+### 安全
+
+- 拖曳和檔案關聯的路徑不走全域 fs scope，改由 Rust 端逐檔驗證（檔案存在、是普通檔案、解析 symlink 後副檔名仍為 `.md`/`.markdown`）才動態授權
+- `RunEvent::Opened` 收到的 URL 在 Rust 端先過濾為 markdown 檔，非 markdown 路徑不會進入前端流程
+
+### 已知限制
+
+- Windows 暖啟動（app 已開啟時雙擊另一個 `.md`）會開第二個視窗，需要 `tauri-plugin-single-instance` 才能轉發給既有 instance——macOS 不受影響（`RunEvent::Opened` 正常處理）
+
 ## [0.2.1] - 2026-06-12
 
 ### 修復

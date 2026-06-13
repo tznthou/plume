@@ -1,6 +1,6 @@
 [package]
 name = "plume"
-version = "0.2.0"
+version = "0.3.0"
 description = "Lightweight Markdown editor with live preview"
 authors = ["tznthou"]
 license = "Apache-2.0"

@@ -4,6 +4,22 @@
 
 This file tracks notable changes to Plume. Format inspired by [Keep a Changelog](https://keepachangelog.com); versions follow [SemVer](https://semver.org).
 
+## [0.3.0] - 2026-06-13
+
+### Added
+
+- Drag-and-drop file open: drop a `.md` file onto the window to open it. A themed accent-color border appears while hovering (instrument gold under Vol de Nuit, cinnabar under Inkstone), and unsaved changes trigger a save-or-discard dialog first
+- OS file association: right-click a `.md` in Finder → "Open With" → Plume, or set Plume as the default handler. Double-clicking a `.md` launches Plume with the file loaded; doing so while Plume is already running opens the file in the existing window (macOS)
+
+### Security
+
+- Drag-and-drop and file-association paths bypass the dialog-based scope and instead go through a per-file Rust validation gate: the file must exist, be a regular file (not a directory or device), and its extension must still be `.md`/`.markdown` after resolving symlinks
+- URLs received via `RunEvent::Opened` are filtered to markdown files on the Rust side before reaching the frontend
+
+### Known Limitations
+
+- Windows warm-start (double-clicking another `.md` while Plume is running) opens a second window instead of reusing the existing one — this requires `tauri-plugin-single-instance` to forward file paths to the running instance. macOS is unaffected (`RunEvent::Opened` handles warm-start natively)
+
 ## [0.2.1] - 2026-06-12
 
 ### Fixed
