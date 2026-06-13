@@ -238,6 +238,57 @@ Task 2 與 Task 1 可平行；Task 5/6/7 在 Task 4 後可平行。
 
 ---
 
+### Task 9: 拖曳開檔
+
+**目標**：拖曳 `.md` 到視窗即可開啟。
+
+**影響範圍**：
+- Modify: `src-tauri/src/lib.rs`（加 `grant_scope` command 授權外部路徑 fs scope）
+- Modify: `src-tauri/build.rs`（`AppManifest` 宣告 command 以自動生成 ACL）
+- Modify: `src-tauri/capabilities/default.json`（加 `allow-grant-scope`）
+- Modify: `src/file.ts`（加 `openExternal()`：grant scope → dirty check → loadPath）
+- Modify: `src/main.ts`（`onDragDropEvent` 監聽 + drag-hover class 切換）
+- Modify: `src/style.css`（`body.drag-hover` 視覺回饋）
+- Test: `tests/file.test.ts`（openExternal 三測試）
+
+**依賴**：Task 4（檔案操作與狀態）
+
+**驗收條件**：
+- Given `.md` 檔 → When 拖入視窗 → Then 檔案開啟、標題更新
+- Given `.txt` 檔 → When 拖入視窗 → Then 無反應
+- Given dirty 文件 → When 拖入 `.md` → Then 出現儲存確認對話框
+- Given 拖曳中 → When 檔案懸停於視窗 → Then 出現視覺回饋（accent 色邊框）
+
+**測試設計**：
+- 正常：`test_file_openExternal_validMd_grantsAndLoads`
+- 邊界：`test_file_openExternal_dirty_confirmsFirst`
+- 邊界：`test_file_openExternal_scopeFails_showsError`
+
+**完成信號**：測試通過 + 手動拖 .md 能開
+
+---
+
+### Task 10: 檔案關聯
+
+**目標**：在 Finder/Explorer 雙擊 `.md` 以 Plume 開啟。
+
+**影響範圍**：
+- Modify: `src-tauri/tauri.conf.json`（`bundle.fileAssociations` 註冊 .md/.markdown）
+- Modify: `src-tauri/src/lib.rs`（`RunEvent::Opened` macOS handler + Windows `std::env::args` fallback + `get_opened_urls` command）
+- Modify: `src-tauri/capabilities/default.json`（加 `allow-get-opened-urls`）
+- Modify: `src/main.ts`（cold-start `invoke` + warm-start `listen("file-open")`)
+
+**依賴**：Task 9（共用 `grant_scope` command 和 `openExternal`）
+
+**驗收條件**：
+- Given `.app` 已安裝 → When Finder 右鍵 `.md` → 以 Plume 打開 → Then 檔案開啟
+- Given Plume 未執行 → When 雙擊 `.md`（cold-start） → Then Plume 啟動並開啟該檔
+- Given Plume 執行中 → When 雙擊另一個 `.md`（warm-start） → Then 開啟新檔，dirty check 正常
+
+**完成信號**：build → 安裝 → 雙擊 .md 開啟
+
+---
+
 ## 驗證計畫
 
 ### 冒煙測試清單（< 5 分鐘）
@@ -251,3 +302,8 @@ Task 2 與 Task 1 可平行；Task 5/6/7 在 Task 4 後可平行。
 - [ ] 編輯區捲動，預覽跟隨
 - [ ] 重啟後最近檔案可直接開啟
 - [ ] 貼入 `<script>alert(1)</script>` 與 `<img src=x onerror=alert(2)>` 不執行；預覽點外部連結開系統瀏覽器
+- [ ] 拖 `.md` 到視窗 → 開檔、標題更新；拖 `.txt` → 無反應
+- [ ] 拖曳懸停時視覺回饋（accent 色邊框），離開/放下後消失
+- [ ] dirty 狀態下拖入 `.md` → 確認對話框正常
+- [ ] Finder 雙擊 `.md`（cold-start）→ Plume 啟動並開檔
+- [ ] Plume 執行中雙擊另一 `.md`（warm-start）→ 開檔 + dirty check

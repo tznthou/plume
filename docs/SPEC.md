@@ -13,16 +13,19 @@ flowchart TB
         file["file.ts<br/>open / save / saveAs / exportHtml<br/>DocState（path / dirty）"]
         recent["recent.ts<br/>最近檔案清單"]
     end
-    subgraph RustCore["Rust 核心（src-tauri，零自訂 command）"]
+    subgraph RustCore["Rust 核心（src-tauri）"]
         dialog["plugin-dialog"]
         fs["plugin-fs"]
         store["plugin-store"]
         pscope["plugin-persisted-scope"]
         opener["plugin-opener"]
+        cmd["自訂 command<br/>grant_scope / get_opened_urls"]
     end
     editor -- "updateListener<br/>debounce 50ms" --> renderer --> preview
     main --> editor & file & recent
     file -- IPC --> dialog & fs
+    main -- "grant_scope<br/>get_opened_urls" --> cmd
+    cmd -- "fs_scope().allow_file()" --> fs
     recent -- IPC --> store
     preview -- IPC --> opener
     pscope -. "自動持久化<br/>dialog 授權的 fs scope" .-> fs
@@ -36,9 +39,9 @@ flowchart TB
 | `src/editor.ts` | 封裝 CM6：建立 EditorView（行號、lang-markdown、基礎快捷鍵）、提供 `getContent()` / `setContent()` / `onChange(cb)` | codemirror |
 | `src/renderer.ts` | **純函式** `render(md: string): string`：markdown-it（GFM + linkify + task-lists）→ highlight.js → DOMPurify | markdown-it, hljs, dompurify |
 | `src/preview.ts` | 接收 HTML 更新預覽 DOM、同步捲動（編輯→預覽單向比例式）、攔截 `a[href^="http"]` 點擊改走 opener | renderer 輸出, plugin-opener |
-| `src/file.ts` | 開/存/另存/新增/匯出 HTML；dirty 確認流程；維護 `DocState`（path/dirty）；更新視窗標題（`檔名 ●`）。內容唯一真相來源是 CM6 EditorState，**不另存字串副本** | plugin-dialog, plugin-fs |
+| `src/file.ts` | 開/存/另存/新增/匯出 HTML/外部路徑開檔（`openExternal`）；dirty 確認流程；維護 `DocState`（path/dirty）；更新視窗標題（`檔名 ●`）。內容唯一真相來源是 CM6 EditorState，**不另存字串副本** | plugin-dialog, plugin-fs, core(invoke) |
 | `src/recent.ts` | 最近 10 筆（去重、新→舊）；讀寫 store；失效項移除 | plugin-store, file |
-| `src-tauri/src/lib.rs` | Tauri builder：註冊五個官方 plugin，無自訂 command | tauri plugins |
+| `src-tauri/src/lib.rs` | Tauri builder：註冊五個官方 plugin + 兩個自訂 command（`grant_scope` / `get_opened_urls`）；`RunEvent::Opened` 檔案關聯處理 | tauri plugins, tauri-plugin-fs(FsExt) |
 
 ## IPC 邊界與權限（capabilities）
 
@@ -55,8 +58,14 @@ flowchart TB
 | 跨 session 路徑授權 | `plugin-persisted-scope` | （自動，無前端 API） |
 | 外開連結 | `plugin-opener` `openUrl()` | `opener:allow-open-url` |
 | 關閉攔截／視窗標題 | `onCloseRequested()` / `destroy()` / `setTitle()` | `core:window:allow-close`, `core:window:allow-destroy`, `core:window:allow-set-title`（dirty 攔截確認後以 `destroy()` 關閉，避免 `close()` 重觸發事件） |
+| 外部路徑授權 fs scope | `invoke("grant_scope", { path })` | `allow-grant-scope`（自訂 command；驗證 .md/.markdown 副檔名後呼叫 `fs_scope().allow_file()`） |
+| 冷啟動檔案路徑取得 | `invoke("get_opened_urls")` | `allow-get-opened-urls`（自訂 command；回傳 OS 傳入的檔案路徑後清空暫存） |
+| 拖曳事件 | `getCurrentWebview().onDragDropEvent()` | 無額外權限（Tauri 2 core 內建） |
+| 暖啟動檔案事件 | `listen("file-open")` | 無額外權限（`core:event:default` 已含 listen） |
 
 關鍵機制：`plugin-fs` 預設 scope 不含使用者任意路徑；經 `plugin-dialog` 選取的路徑會被動態加入 fs scope，`plugin-persisted-scope` 再把這份授權跨 session 保存——這是「最近檔案重啟後仍可開」的依賴鏈，缺一不可。此鏈路已完整實測通過：前半段（dialog 授權 → fs scope → readTextFile）於 2026-06-11 Task 0 IPC spike 驗證；persisted-scope 跨 session 段於同日 Task 6 驗收驗證（重啟後不經 dialog 直開最近檔案成功）。
+
+拖曳與檔案關聯的路徑不來自 dialog，改以自訂 command `grant_scope` 呼叫 Rust 端 `FsExt::fs_scope().allow_file()` 動態加入 scope（僅接受 .md/.markdown 副檔名）。此設計維持 capabilities 不開全域路徑的安全原則。
 
 ## 渲染管線規格
 

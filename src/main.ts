@@ -1,5 +1,8 @@
 // 組裝：editor docChanged → debounce 50ms → render → preview（SPEC「渲染管線規格」，
 // 同步呼叫鏈、無 async）；檔案操作接線與快捷鍵（Task 4）；最近檔案下拉（Task 6）。
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getContent, getLineCount, getScrollDOM, initEditor, onChange } from "./editor";
 import { initPreview, scrollToTopOnNextUpdate, showError, update } from "./preview";
 import { render } from "./renderer";
@@ -10,6 +13,7 @@ import {
   newFile,
   onDirtyChange,
   onLoad,
+  openExternal,
   openFile,
   openRecent,
   saveAs,
@@ -113,3 +117,40 @@ window.addEventListener("keydown", (e) => {
 
 void initFileModule(); // onCloseRequested dirty 攔截 + 初始視窗標題
 void refreshRecentUI(); // 啟動時載入既有清單
+
+// ----- 拖曳開檔（drag & drop .md onto window） -----
+
+const MD_EXT = /\.(md|markdown)$/i;
+
+function openExternalWithRefresh(path: string): void {
+  void openExternal(path).then(refreshRecentUI);
+}
+
+void getCurrentWebview().onDragDropEvent((event) => {
+  const { type } = event.payload;
+  if (type === "drop") {
+    document.body.classList.remove("drag-hover");
+    const md = event.payload.paths.find((p) => MD_EXT.test(p));
+    if (md) openExternalWithRefresh(md);
+  } else if (type === "enter" || type === "over") {
+    document.body.classList.add("drag-hover");
+  } else {
+    document.body.classList.remove("drag-hover");
+  }
+});
+
+// ----- 檔案關聯（OS file association） -----
+
+// Cold-start：app 被雙擊檔案啟動時，Rust 已暫存路徑
+void invoke<string[]>("get_opened_urls").then((urls) => {
+  if (urls.length) {
+    const md = urls.find((p) => MD_EXT.test(p));
+    if (md) openExternalWithRefresh(md);
+  }
+});
+
+// Warm-start：app 已執行中，使用者再雙擊另一個 .md
+void listen<string[]>("file-open", (event) => {
+  const md = event.payload.find((p) => MD_EXT.test(p));
+  if (md) openExternalWithRefresh(md);
+});

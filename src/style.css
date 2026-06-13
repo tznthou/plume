@@ -915,6 +915,19 @@ html[data-theme="vol-de-nuit"] #illos img {
   animation: pane-in 0.3s ease-out 0.1s backwards;
 }
 
+/* ===== 拖曳回饋 ===== */
+
+body.drag-hover::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  border: 3px solid var(--accent);
+  opacity: 0.6;
+  border-radius: 4px;
+}
+
 /* ===== 動效全關 ===== */
 
 @media (prefers-reduced-motion: reduce) {

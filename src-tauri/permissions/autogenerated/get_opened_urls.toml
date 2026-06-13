@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-opened-urls"
+description = "Enables the get_opened_urls command without any pre-configured scope."
+commands.allow = ["get_opened_urls"]
+
+[[permission]]
+identifier = "deny-get-opened-urls"
+description = "Denies the get_opened_urls command without any pre-configured scope."
+commands.deny = ["get_opened_urls"]

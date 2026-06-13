@@ -18,6 +18,8 @@
     {
       "identifier": "opener:allow-open-url",
       "allow": [{ "url": "https://**" }, { "url": "http://**" }]
-    }
+    },
+    "allow-grant-scope",
+    "allow-get-opened-urls"
   ]
 }
