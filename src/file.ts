@@ -1,6 +1,7 @@
 // 檔案操作與文件狀態（SPEC「模組職責」「資料模型」「錯誤處理標準」）。
 // 內容唯一真相來源是 CM6 EditorState：讀走 getContent()、寫走 setContent()，
 // 此處只維護 path/dirty。匯出 HTML 於 Task 7 加入。
+import { invoke } from "@tauri-apps/api/core";
 import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -221,6 +222,25 @@ export async function exportHtml(): Promise<void> {
   } catch (e) {
     // 匯出是副本輸出，不碰 DocState；失敗同寫檔標準：阻斷 dialog 顯示原因
     await message(`匯出失敗：${String(e)}`, { title: "匯出失敗", kind: "error" });
+  }
+}
+
+let opening = false;
+
+export async function openExternal(path: string): Promise<void> {
+  if (opening) return;
+  opening = true;
+  try {
+    if (!(await confirmLoseChanges())) return;
+    await invoke("grant_scope", { path });
+    await loadPath(path);
+  } catch (e) {
+    await message(`無法開啟檔案：${String(e)}`, {
+      title: "開啟失敗",
+      kind: "error",
+    });
+  } finally {
+    opening = false;
   }
 }
 
