@@ -27,12 +27,16 @@ const recentMocks = vi.hoisted(() => ({
   addRecent: vi.fn(),
   removeRecent: vi.fn(),
 }));
+const coreMocks = vi.hoisted(() => ({
+  invoke: vi.fn(),
+}));
 
 vi.mock("@tauri-apps/plugin-dialog", () => dialogMocks);
 vi.mock("@tauri-apps/plugin-fs", () => fsMocks);
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => windowMocks,
 }));
+vi.mock("@tauri-apps/api/core", () => coreMocks);
 vi.mock("../src/editor", () => editorMocks);
 vi.mock("../src/recent", () => recentMocks);
 
@@ -122,5 +126,52 @@ describe("file", () => {
     expect(file.getDocState()).toEqual({ path: null, dirty: false });
     expect(dialogMocks.message).toHaveBeenCalledOnce();
     expect(recentMocks.removeRecent).toHaveBeenCalledWith("/tmp/gone.md");
+  });
+
+  it("test_file_openExternal_validMd_grantsAndLoads", async () => {
+    coreMocks.invoke.mockResolvedValue("/real/dragged.md");
+    fsMocks.readTextFile.mockResolvedValue("# 拖曳開啟");
+
+    const file = await loadFileModule();
+    await file.openExternal("/tmp/dragged.md");
+
+    expect(coreMocks.invoke).toHaveBeenCalledWith("grant_scope", {
+      path: "/tmp/dragged.md",
+    });
+    expect(editorMocks.setContent).toHaveBeenCalledWith("# 拖曳開啟");
+    expect(file.getDocState()).toEqual({ path: "/real/dragged.md", dirty: false });
+    expect(recentMocks.addRecent).toHaveBeenCalledWith("/real/dragged.md");
+  });
+
+  it("test_file_openExternal_dirty_confirmsFirst", async () => {
+    coreMocks.invoke.mockResolvedValue("/tmp/new.md");
+    fsMocks.readTextFile.mockResolvedValue("原始");
+    dialogMocks.open.mockResolvedValue("/tmp/a.md");
+
+    const file = await loadFileModule();
+    await file.openFile();
+    file.markDirty();
+
+    // 使用者取消儲存又取消放棄 → 不繼續開檔
+    dialogMocks.ask.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+    fsMocks.readTextFile.mockResolvedValue("# 新檔");
+
+    await file.openExternal("/tmp/new.md");
+
+    expect(dialogMocks.ask).toHaveBeenCalled();
+    expect(file.getDocState().path).toBe("/tmp/a.md");
+  });
+
+  it("test_file_openExternal_scopeFails_showsError", async () => {
+    coreMocks.invoke.mockRejectedValue(
+      new Error("Only .md and .markdown files are allowed"),
+    );
+
+    const file = await loadFileModule();
+    await file.openExternal("/tmp/bad.txt");
+
+    expect(dialogMocks.message).toHaveBeenCalledOnce();
+    expect(fsMocks.readTextFile).not.toHaveBeenCalled();
+    expect(editorMocks.setContent).not.toHaveBeenCalled();
   });
 });

@@ -232,8 +232,8 @@ export async function openExternal(path: string): Promise<void> {
   opening = true;
   try {
     if (!(await confirmLoseChanges())) return;
-    await invoke("grant_scope", { path });
-    await loadPath(path);
+    const resolved = await invoke<string>("grant_scope", { path });
+    await loadPath(resolved);
   } catch (e) {
     await message(`無法開啟檔案：${String(e)}`, {
       title: "開啟失敗",

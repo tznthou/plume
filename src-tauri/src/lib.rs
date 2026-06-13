@@ -6,9 +6,8 @@ use tauri_plugin_fs::FsExt;
 struct OpenedUrls(Mutex<Option<Vec<tauri::Url>>>);
 
 #[tauri::command]
-fn grant_scope(app: tauri::AppHandle, path: String) -> Result<(), String> {
+fn grant_scope(app: tauri::AppHandle, path: String) -> Result<String, String> {
     let p = PathBuf::from(&path);
-    // Resolve symlinks: validate the real target, not the link name
     let canonical = p.canonicalize().map_err(|e| e.to_string())?;
     if !canonical.is_file() {
         return Err("Path is not a regular file".into());
@@ -16,7 +15,10 @@ fn grant_scope(app: tauri::AppHandle, path: String) -> Result<(), String> {
     if !is_markdown(&canonical) {
         return Err("Only .md and .markdown files are allowed".into());
     }
-    app.fs_scope().allow_file(&p).map_err(|e| e.to_string())
+    app.fs_scope()
+        .allow_file(&canonical)
+        .map_err(|e| e.to_string())?;
+    Ok(canonical.to_string_lossy().into_owned())
 }
 
 #[tauri::command]
@@ -68,21 +70,29 @@ pub fn run() {
     app.run(|app_handle, event| {
         #[cfg(any(target_os = "macos", target_os = "ios", target_os = "android"))]
         if let tauri::RunEvent::Opened { urls } = event {
-            let paths: Vec<String> = urls
-                .iter()
-                .filter_map(|url| url.to_file_path().ok())
-                .filter(|p| is_markdown(p))
-                .map(|p| p.to_string_lossy().into_owned())
+            let md_urls: Vec<tauri::Url> = urls
+                .into_iter()
+                .filter(|url| {
+                    url.to_file_path()
+                        .ok()
+                        .map(|p| is_markdown(&p))
+                        .unwrap_or(false)
+                })
                 .collect();
-            if paths.is_empty() {
+            if md_urls.is_empty() {
                 return;
             }
+            let paths: Vec<String> = md_urls
+                .iter()
+                .filter_map(|url| url.to_file_path().ok())
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect();
             app_handle
                 .state::<OpenedUrls>()
                 .0
                 .lock()
                 .unwrap()
-                .replace(urls);
+                .replace(md_urls);
             let _ = app_handle.emit("file-open", &paths);
         }
     });
