@@ -134,11 +134,11 @@ markdown-tool/
 
 ### Why this exists
 
-I read and write far more Markdown than I ever signed up for. That's an AI-era thing: model output, project docs, technical notes — these days it all arrives as `.md`. Markdown used to be something that lived inside Obsidian for me; conceptually it's plain text, no different from opening a TXT. In practice, though, every open and every edit meant reaching for some other tool.
+I read and write far more Markdown than I ever signed up for. That's an AI-era thing: model output, project docs, technical notes — these days it all arrives as `.md`. Markdown used to live inside Obsidian for me, conceptually no different from plain text. Now it's a daily format.
 
-The catch is that a Markdown file never shows you its rendered self. The source is readable, but tables, task lists, and code blocks only take shape once rendered — unlike a Word document, which opens already laid out. So the routine became: spin up an entire Obsidian vault, hand the file to a browser extension, or push it to GitHub just to see how one file looks. A long detour for "let me read this."
+The catch is that Markdown never shows you its rendered self. Tables, task lists, and code blocks only take shape once rendered — unlike a Word document, which opens already laid out. So every time I wanted to read a single `.md`, the routine was: spin up an Obsidian vault, hand it to a browser extension, or push to GitHub just to see how it looks. A long detour for "let me read this."
 
-There are plenty of Markdown editors around. I simply wanted one of my own: opens instantly, previews as you type, saves and steps aside. No vault, no account, no plugin ecosystem. Even the name was deliberate — plume, the French word for a feather, and for the quill you write with. Light, and made for writing.
+So I made my own: opens instantly, previews as you type, saves and steps aside. No vault, no account, no plugin ecosystem. Even the name was deliberate — plume, the French word for a feather, and for the quill you write with. Light — for reading, and for writing with care.
 
 ---
 
