@@ -36,11 +36,7 @@ fn get_opened_urls(state: tauri::State<'_, OpenedUrls>) -> Vec<String> {
 fn is_markdown(path: &std::path::Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
-        .map(|e| {
-            let lower = e.to_lowercase();
-            lower == "md" || lower == "markdown"
-        })
-        .unwrap_or(false)
+        .is_some_and(|e| matches!(e.to_lowercase().as_str(), "md" | "markdown"))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
