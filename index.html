@@ -25,6 +25,7 @@
       <button id="btn-theme" type="button" aria-label="切換佈景主題">
         <span class="theme-name" aria-hidden="true"></span>
       </button>
+      <button id="btn-toc" type="button" class="read-only">目錄</button>
       <button id="btn-mode" type="button" aria-label="切換閱讀/編輯模式">
         <span class="mode-name" aria-hidden="true"></span>
       </button>
@@ -34,6 +35,7 @@
     </header>
 
     <main>
+      <aside id="toc"><ul></ul></aside>
       <div id="editor"></div>
       <div id="preview"></div>
       <!-- 夜航主題浮飾：郵務機（預覽右上）+ 守夜狐（編輯區右下）。

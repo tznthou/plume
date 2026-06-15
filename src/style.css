@@ -921,6 +921,10 @@ body[data-mode="read"] .edit-only {
   display: none;
 }
 
+body[data-mode="edit"] .read-only {
+  display: none;
+}
+
 body[data-mode="read"] #editor {
   display: none;
 }
@@ -932,7 +936,8 @@ body[data-mode="read"] #preview {
 }
 
 body[data-mode="read"] .illo-fox {
-  display: none !important;
+  right: 28px;
+  transform: scaleX(-1);
 }
 
 /* 模式切換鈕：文字由 data-mode 決定 */
@@ -942,6 +947,65 @@ body[data-mode="read"] #btn-mode .mode-name::before {
 
 body[data-mode="edit"] #btn-mode .mode-name::before {
   content: "閱讀";
+}
+
+/* ===== TOC 目錄導覽 ===== */
+
+#toc {
+  display: none;
+  width: 220px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  padding: 16px 12px;
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 12.5px;
+}
+
+body[data-toc="open"][data-mode="read"] #toc {
+  display: block;
+}
+
+#toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#toc li {
+  padding: 5px 8px;
+  cursor: pointer;
+  color: var(--fg-muted);
+  line-height: 1.5;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#toc li:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+#toc li[data-level="1"] {
+  font-weight: 600;
+  color: var(--fg-strong);
+}
+
+#toc li[data-level="2"] { padding-left: 16px; }
+#toc li[data-level="3"] { padding-left: 28px; }
+#toc li[data-level="4"] { padding-left: 40px; }
+#toc li[data-level="5"] { padding-left: 52px; }
+#toc li[data-level="6"] { padding-left: 64px; }
+
+html[data-theme="vol-de-nuit"] #toc li:hover {
+  box-shadow: 0 0 8px rgba(232, 184, 75, 0.12);
+}
+
+html[data-theme="inkstone"] #toc {
+  background: #f1ede3;
 }
 
 /* ===== 拖曳回饋 ===== */

@@ -22,12 +22,14 @@ import {
 import { getRecent } from "./recent";
 import { initTheme, toggleTheme } from "./theme";
 import { initStatusbar, setDirty, updateStats } from "./statusbar";
+import { initToc, updateToc } from "./toc";
 
 const editorEl = document.querySelector<HTMLElement>("#editor")!;
 const previewEl = document.querySelector<HTMLElement>("#preview")!;
 
 initEditor(editorEl);
 initPreview(previewEl, getScrollDOM());
+initToc(document.querySelector<HTMLElement>("#toc")!, previewEl);
 initStatusbar();
 onDirtyChange(setDirty); // dirty 指示：03 指針垂落 / 05 硃砂印
 onLoad((kind) => {
@@ -37,7 +39,10 @@ onLoad((kind) => {
 
 function setMode(mode: "read" | "edit"): void {
   document.body.dataset.mode = mode;
-  if (mode === "edit") remeasure();
+  if (mode === "edit") {
+    delete document.body.dataset.toc;
+    remeasure();
+  }
 }
 void initTheme(); // index.html 已帶預設主題，這裡載入使用者上次選擇
 
@@ -50,6 +55,7 @@ onChange(() => {
       const content = getContent();
       const t0 = performance.now();
       update(render(content));
+      updateToc();
       updateStats({
         chars: content.replace(/\s/g, "").length, // 寫作直覺的「字數」：不含空白換行
         lines: getLineCount(),
@@ -101,6 +107,9 @@ document.querySelector("#btn-open")!.addEventListener("click", doOpen);
 document.querySelector("#btn-save")!.addEventListener("click", doSave);
 document.querySelector("#btn-export")!.addEventListener("click", () => void exportHtml());
 document.querySelector("#btn-theme")!.addEventListener("click", () => void toggleTheme());
+document.querySelector("#btn-toc")!.addEventListener("click", () => {
+  document.body.dataset.toc = document.body.dataset.toc === "open" ? "closed" : "open";
+});
 document.querySelector("#btn-mode")!.addEventListener("click", () => {
   setMode(document.body.dataset.mode === "read" ? "edit" : "read");
 });
