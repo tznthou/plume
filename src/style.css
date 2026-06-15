@@ -1112,6 +1112,12 @@ body.drag-hover::after {
   border-radius: 4px;
 }
 
+/* ===== Typewriter Mode ===== */
+
+.cm-editor.cm-typewriter .cm-scroller {
+  padding-top: 50vh;
+}
+
 /* ===== Focus Mode ===== */
 
 .cm-editor.cm-focus-mode .cm-line {
