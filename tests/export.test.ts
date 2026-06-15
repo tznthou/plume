@@ -77,7 +77,8 @@ describe("export", () => {
 
   it("test_copyHtml_writesRenderedHtmlToClipboard", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.assign(navigator, { clipboard: { writeText } });
+    const origClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, writable: true, configurable: true });
     editorMocks.getContent.mockReturnValue("# 標題\n\n段落文字");
 
     const file = await loadFileModule();
@@ -87,11 +88,15 @@ describe("export", () => {
     const html = writeText.mock.calls[0][0] as string;
     expect(html).toContain("<h1>標題</h1>");
     expect(html).toContain("<p>段落文字</p>");
+    expect(html).not.toContain("<script");
+    expect(html).not.toContain("onerror");
+    Object.defineProperty(navigator, "clipboard", { value: origClipboard, writable: true, configurable: true });
   });
 
   it("test_copyHtml_clipboardFails_showsErrorDialog", async () => {
     const writeText = vi.fn().mockRejectedValue(new Error("denied"));
-    Object.assign(navigator, { clipboard: { writeText } });
+    const origClipboard = navigator.clipboard;
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, writable: true, configurable: true });
     editorMocks.getContent.mockReturnValue("text");
 
     const file = await loadFileModule();
@@ -101,6 +106,7 @@ describe("export", () => {
       expect.stringContaining("denied"),
       expect.objectContaining({ kind: "error" }),
     );
+    Object.defineProperty(navigator, "clipboard", { value: origClipboard, writable: true, configurable: true });
   });
 
   it("test_export_buildHtml_titleEscaped", async () => {
