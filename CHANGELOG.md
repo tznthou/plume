@@ -4,6 +4,18 @@
 
 本檔記錄 Plume 的版本變更。格式參考 [Keep a Changelog](https://keepachangelog.com)，版本號採 [SemVer](https://semver.org)。
 
+## [Unreleased]
+
+### 新增
+
+- Mermaid 圖表閱讀：在 Markdown 中用 ` ```mermaid ` 區塊嵌入 flowchart、sequence、class、ER、Gantt 等圖表，預覽區即時渲染為 SVG。不需編輯 mermaid——只是讓別人寫的圖表看得到
+- 圖表主題同步：深色（夜航）和淺色（硯墨）主題自動切換 mermaid 配色，切換佈景主題後圖表即時重繪
+
+### 技術細節
+
+- mermaid.js 懶載入：第一次碰到 mermaid 區塊才動態 import，無 mermaid 的檔案不受 bundle 影響
+- 安全：mermaid `securityLevel: "strict"`（內部 DOMPurify + HTML encode）；post-render 用 `cloneNode(true)` 剝除 `addEventListener` 綁定，不經額外 DOMPurify（DOMPurify v3.1.7+ 的 foreignObject mXSS 緩解會剝除圖表文字）
+
 ## [0.4.0] - 2026-06-15
 
 ### 新增
