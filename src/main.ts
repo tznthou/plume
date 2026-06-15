@@ -3,10 +3,13 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { getContent, getLineCount, getScrollDOM, initEditor, onChange, remeasure } from "./editor";
+import { getContent, getLineCount, getScrollDOM, initEditor, onChange, reconfigureFocus, reconfigureTypewriter, remeasure } from "./editor";
+import { focusExtension } from "./focus-mode";
+import { typewriterExtension } from "./typewriter";
 import { initPreview, scrollToTopOnNextUpdate, showError, update } from "./preview";
 import { render } from "./renderer";
 import {
+  copyHtml,
   exportHtml,
   initFileModule,
   markDirty,
@@ -51,6 +54,8 @@ function toggleMode(): void {
 }
 void initTheme(); // index.html 已帶預設主題，這裡載入使用者上次選擇
 
+let typewriterOn = false;
+let focusOn = false;
 let debounceTimer: number | undefined;
 onChange(() => {
   markDirty();
@@ -148,6 +153,24 @@ window.addEventListener("keydown", (e) => {
       e.preventDefault();
       if (e.shiftKey) doSaveAs();
       else doSave();
+      break;
+    case "c":
+      if (e.shiftKey) {
+        e.preventDefault();
+        void copyHtml();
+      }
+      break;
+    case "f":
+      if (e.shiftKey) {
+        e.preventDefault();
+        focusOn = !focusOn;
+        reconfigureFocus(focusOn ? focusExtension() : []);
+      }
+      break;
+    case "t":
+      e.preventDefault();
+      typewriterOn = !typewriterOn;
+      reconfigureTypewriter(typewriterOn ? typewriterExtension() : []);
       break;
     case "e":
       e.preventDefault();

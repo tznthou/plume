@@ -1112,6 +1112,16 @@ body.drag-hover::after {
   border-radius: 4px;
 }
 
+/* ===== Focus Mode ===== */
+
+.cm-editor.cm-focus-mode .cm-line {
+  opacity: 0.25;
+}
+
+.cm-editor.cm-focus-mode .cm-line.cm-line-focus {
+  opacity: 1;
+}
+
 /* ===== 動效全關 ===== */
 
 @media (prefers-reduced-motion: reduce) {

@@ -3,7 +3,11 @@
 import { basicSetup, EditorView } from "codemirror";
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { syntaxHighlighting } from "@codemirror/language";
+import { Compartment, type Extension } from "@codemirror/state";
 import { classHighlighter } from "@lezer/highlight";
+
+const typewriterComp = new Compartment();
+const focusComp = new Compartment();
 
 let view: EditorView | null = null;
 const changeListeners: Array<() => void> = [];
@@ -18,6 +22,8 @@ export function initEditor(parent: HTMLElement): void {
       // 以 ID specificity 蓋過 basicSetup 內建 defaultHighlightStyle 的單 class 規則）
       syntaxHighlighting(classHighlighter),
       EditorView.lineWrapping,
+      typewriterComp.of([]),
+      focusComp.of([]),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           for (const cb of changeListeners) cb();
@@ -53,6 +59,14 @@ export function setContent(text: string): void {
 
 export function remeasure(): void {
   view!.requestMeasure();
+}
+
+export function reconfigureTypewriter(ext: Extension): void {
+  view!.dispatch({ effects: typewriterComp.reconfigure(ext) });
+}
+
+export function reconfigureFocus(ext: Extension): void {
+  view!.dispatch({ effects: focusComp.reconfigure(ext) });
 }
 
 export function onChange(cb: () => void): void {

@@ -238,6 +238,15 @@ ${bodyHtml}
 `;
 }
 
+export async function copyHtml(): Promise<void> {
+  const html = render(getContent());
+  try {
+    await navigator.clipboard.writeText(html);
+  } catch (e) {
+    await message(`複製失敗：${String(e)}`, { title: "複製失敗", kind: "error" });
+  }
+}
+
 export async function exportHtml(): Promise<void> {
   const target = await save({
     filters: [{ name: "HTML", extensions: ["html"] }],
