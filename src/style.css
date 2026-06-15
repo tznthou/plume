@@ -24,6 +24,7 @@ html[data-theme="vol-de-nuit"] {
 
 html[data-theme="inkstone"] {
   --bg: #f5f2eb; /* 宣紙 */
+  --bg-bar: #f1ede3; /* toolbar/statusbar/TOC 微暖底 */
   --bg-panel: #f5f2eb;
   --bg-inset: rgba(214, 209, 196, 0.32);
   --fg: #1f1d1a; /* 焦墨 */
@@ -102,7 +103,7 @@ html[data-theme="inkstone"] body::after {
 
 /* 05：墨暈代框線 */
 html[data-theme="inkstone"] #toolbar {
-  background: #f1ede3;
+  background: var(--bg-bar);
   border-bottom: none;
   box-shadow: 0 12px 26px -18px rgba(31, 29, 26, 0.35);
   position: relative;
@@ -694,7 +695,7 @@ html[data-theme="inkstone"] #preview .task-list-item-checkbox {
 }
 
 html[data-theme="inkstone"] #statusbar {
-  background: #f1ede3;
+  background: var(--bg-bar);
   border-top: none;
   box-shadow: 0 -12px 26px -18px rgba(31, 29, 26, 0.3);
   position: relative;
@@ -1040,7 +1041,7 @@ html[data-theme="vol-de-nuit"] #toc li:hover {
 }
 
 html[data-theme="inkstone"] #toc {
-  background: #f1ede3;
+  background: var(--bg-bar);
 }
 
 /* ===== 拖曳回饋 ===== */

@@ -45,6 +45,10 @@ function setMode(mode: "read" | "edit"): void {
     remeasure();
   }
 }
+
+function toggleMode(): void {
+  toggleMode();
+}
 void initTheme(); // index.html 已帶預設主題，這裡載入使用者上次選擇
 
 let debounceTimer: number | undefined;
@@ -118,7 +122,7 @@ document.querySelector("#btn-exit-fullscreen")!.addEventListener("click", () => 
   delete document.body.dataset.fullscreen;
 });
 document.querySelector("#btn-mode")!.addEventListener("click", () => {
-  setMode(document.body.dataset.mode === "read" ? "edit" : "read");
+  toggleMode();
 });
 
 // ----- 快捷鍵 Cmd(mac)/Ctrl(win) + N / O / S / Shift+S -----
@@ -145,7 +149,7 @@ window.addEventListener("keydown", (e) => {
       break;
     case "e":
       e.preventDefault();
-      setMode(document.body.dataset.mode === "read" ? "edit" : "read");
+      toggleMode();
       break;
   }
 });
