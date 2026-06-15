@@ -22,13 +22,18 @@
     "codemirror": "^6.0.2",
     "dompurify": "^3.4.9",
     "highlight.js": "^11.11.1",
+    "katex": "^0.17.0",
     "markdown-it": "^14.2.0",
+    "markdown-it-footnote": "^4.0.0",
+    "markdown-it-front-matter": "^0.2.4",
     "markdown-it-task-lists": "^2.1.1",
     "mermaid": "^11.15.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
+    "@types/katex": "^0.16.8",
     "@types/markdown-it": "^14.1.2",
+    "@types/markdown-it-footnote": "^3.0.4",
     "@vitest/coverage-v8": "^4.1.8",
     "jsdom": "^29.1.1",
     "typescript": "~5.6.2",

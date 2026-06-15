@@ -109,4 +109,83 @@ describe("renderer.render", () => {
     expect(img!.getAttribute("src")).toBe("x");
     expect(img!.getAttribute("onerror")).toBeNull();
   });
+
+  it("test_renderer_render_frontMatter_strippedFromOutput", () => {
+    const out = render("---\ntitle: My Doc\ntags: [a, b]\n---\n\n# Content");
+
+    expect(out).not.toContain("title:");
+    expect(out).not.toContain("My Doc");
+    expect(out).toContain("Content");
+    expect(parse(out).querySelector("h1")).not.toBeNull();
+  });
+
+  it("test_renderer_render_footnote_outputsSuperscriptLink", () => {
+    const out = render(
+      "Text with a footnote[^1].\n\n[^1]: This is the footnote content.",
+    );
+
+    const ref = parse(out).querySelector(".footnote-ref a");
+    expect(ref).not.toBeNull();
+    expect(ref!.getAttribute("href")).toMatch(/^#fn/);
+    expect(ref!.closest("sup")).not.toBeNull();
+  });
+
+  it("test_renderer_render_footnote_outputsFootnoteSection", () => {
+    const out = render(
+      "Text[^note].\n\n[^note]: Footnote body here.",
+    );
+
+    const section = parse(out).querySelector(".footnotes");
+    expect(section).not.toBeNull();
+    expect(section!.querySelector(".footnote-item")).not.toBeNull();
+    expect(section!.textContent).toContain("Footnote body here");
+  });
+
+  it("test_renderer_render_inlineMath_outputsMathInlineAttr", () => {
+    const out = render("The equation $E=mc^2$ is famous.");
+
+    const el = parse(out).querySelector("[data-math-inline]");
+    expect(el).not.toBeNull();
+    expect(el!.tagName).toBe("SPAN");
+    expect(el!.textContent).toBe("E=mc^2");
+  });
+
+  it("test_renderer_render_blockMath_outputsMathBlockAttr", () => {
+    const out = render("$$\n\\sum_{i=1}^{n} i\n$$");
+
+    const el = parse(out).querySelector("[data-math-block]");
+    expect(el).not.toBeNull();
+    expect(el!.tagName).toBe("DIV");
+    expect(el!.textContent).toContain("\\sum_{i=1}^{n} i");
+  });
+
+  it("test_renderer_render_mathCodeFence_outputsMathBlockAttr", () => {
+    const out = render("```math\nf(x) = x^2\n```");
+
+    const el = parse(out).querySelector("[data-math-block]");
+    expect(el).not.toBeNull();
+    expect(el!.textContent).toContain("f(x) = x^2");
+  });
+
+  it("test_renderer_render_thematicBreak_notEatenByFrontMatter", () => {
+    const out = render("---\nSome content after a thematic break");
+
+    expect(out).toContain("Some content");
+  });
+
+  it("test_renderer_render_dollarInText_notMisdetectedAsMath", () => {
+    const out = render("Prices are $5 and $10 per unit.");
+
+    expect(parse(out).querySelector("[data-math-inline]")).toBeNull();
+    expect(out).toContain("$5");
+    expect(out).toContain("$10");
+  });
+
+  it("test_renderer_render_singleLineDollarDollar_outputsMathBlock", () => {
+    const out = render("$$ E = mc^2 $$");
+
+    const el = parse(out).querySelector("[data-math-block]");
+    expect(el).not.toBeNull();
+    expect(el!.textContent).toBe("E = mc^2");
+  });
 });

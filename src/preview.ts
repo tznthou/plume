@@ -1,14 +1,17 @@
 // 預覽 DOM 更新 + 同步捲動（編輯→預覽單向比例式）+ 外部連結攔截（SPEC「模組職責」、Task 5）。
+import DOMPurify from "dompurify";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { currentTheme } from "./theme";
 
 let container: HTMLElement | null = null;
 
-// mermaid 懶載入：第一次碰到 ```mermaid block 才 import，避免無 mermaid 的檔案吃 bundle 成本。
+// 懶載入：第一次碰到對應 block 才 import，避免無需求的檔案吃 bundle 成本。
 // generation 計數器防 rapid update 時對已脫離 DOM 的舊元素操作。
 let mermaidPromise: Promise<typeof import("mermaid").default> | null = null;
-let mermaidGen = 0;
+let renderGen = 0;
 let lastMermaidTheme: string | undefined;
+
+let katexPromise: Promise<typeof import("katex").default> | null = null;
 
 function getMermaid(): Promise<typeof import("mermaid").default> {
   if (!mermaidPromise) {
@@ -21,7 +24,7 @@ async function renderMermaid(gen: number): Promise<void> {
   if (!container!.querySelector("pre.mermaid")) return;
 
   const mermaid = await getMermaid();
-  if (gen !== mermaidGen) return;
+  if (gen !== renderGen) return;
 
   const theme = currentTheme() === "vol-de-nuit" ? "dark" : "default";
   if (theme !== lastMermaidTheme) {
@@ -42,6 +45,50 @@ async function renderMermaid(gen: number): Promise<void> {
   for (const el of container!.querySelectorAll<HTMLElement>("pre.mermaid")) {
     const clean = el.cloneNode(true) as HTMLElement;
     el.replaceChildren(...clean.childNodes);
+  }
+}
+
+function getKaTeX(): Promise<typeof import("katex").default> {
+  if (!katexPromise) {
+    katexPromise = Promise.all([
+      import("katex"),
+      import("katex/dist/katex.min.css"),
+    ]).then(([m]) => m.default).catch((err) => {
+      katexPromise = null;
+      throw err;
+    });
+  }
+  return katexPromise;
+}
+
+async function renderMath(gen: number): Promise<void> {
+  const els = container!.querySelectorAll<HTMLElement>(
+    "[data-math-inline],[data-math-block]",
+  );
+  if (els.length === 0) return;
+
+  let katex: typeof import("katex").default;
+  try {
+    katex = await getKaTeX();
+  } catch (err) {
+    console.warn("[katex] load failed", err);
+    return;
+  }
+  if (gen !== renderGen) return;
+
+  for (const el of els) {
+    const displayMode = el.hasAttribute("data-math-block");
+    // 安全靠 KaTeX trust:false（禁止 \href/\url/\htmlClass 等 HTML 注入命令）
+    // + DOMPurify 二次消毒（同 render() 的安全承重牆）。
+    const raw = katex.renderToString(el.textContent!, {
+      displayMode,
+      throwOnError: false,
+      trust: false,
+      maxSize: 20,
+    });
+    el.innerHTML = DOMPurify.sanitize(raw);
+    el.removeAttribute("data-math-inline");
+    el.removeAttribute("data-math-block");
   }
 }
 
@@ -79,9 +126,15 @@ export function initPreview(el: HTMLElement, editorScroller: HTMLElement): void 
     const anchor = (e.target as HTMLElement).closest("a");
     if (!anchor) return;
     e.preventDefault();
-    // 取原始 href：resolved 的 anchor.href 會把相對路徑補成 http://localhost，誤判為外部連結
     const href = anchor.getAttribute("href");
-    if (href && /^https?:\/\//i.test(href)) void openUrl(href);
+    if (!href) return;
+    // fragment link（footnote 等）→ 頁內捲動
+    if (href.startsWith("#")) {
+      const target = container!.querySelector(href);
+      if (target) target.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    if (/^https?:\/\//i.test(href)) void openUrl(href);
   });
 }
 
@@ -91,8 +144,9 @@ export function update(html: string): void {
     container!.scrollTop = 0;
     resetScrollOnUpdate = false;
   }
-  const gen = ++mermaidGen;
+  const gen = ++renderGen;
   void renderMermaid(gen);
+  void renderMath(gen);
 }
 
 // SPEC 錯誤處理標準：渲染例外時預覽顯示錯誤帶。textContent 寫入，錯誤訊息不走 HTML。

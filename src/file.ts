@@ -189,7 +189,34 @@ th { font-weight: 600; }
 tbody tr:nth-child(2n) { background: #f6f8fa; }
 .task-list-item { list-style-type: none; }
 .task-list-item-checkbox { margin: 0 0.2em 0.25em -1.4em; vertical-align: middle; }
+.footnote-ref a { text-decoration: none; color: #0969da; vertical-align: super; font-size: 0.85em; }
+.footnotes-sep { margin: 2em 0 1em; border: none; border-top: 1px solid #d1d9e0; }
+.footnotes { font-size: 0.9em; color: #59636e; }
+.footnote-backref { text-decoration: none; margin-left: 0.25em; }
 `;
+
+// 匯出用：把 data-math-* placeholder 替換為 MathML（瀏覽器原生渲染，不需 KaTeX CSS/字型）
+async function renderMathForExport(html: string): Promise<string> {
+  const container = document.createElement("div");
+  container.innerHTML = html;
+  const els = container.querySelectorAll("[data-math-inline],[data-math-block]");
+  if (els.length === 0) return html;
+
+  const katex = (await import("katex")).default;
+  for (const el of els) {
+    const displayMode = el.hasAttribute("data-math-block");
+    el.innerHTML = katex.renderToString(el.textContent!, {
+      displayMode,
+      throwOnError: false,
+      trust: false,
+      maxSize: 20,
+      output: "mathml",
+    });
+    el.removeAttribute("data-math-inline");
+    el.removeAttribute("data-math-block");
+  }
+  return container.innerHTML;
+}
 
 // 純函式，供測試直接驗證模板結構。bodyHtml 必須是 render() 的輸出（已過 DOMPurify）。
 export function buildExportHtml(title: string, bodyHtml: string): string {
@@ -218,7 +245,8 @@ export async function exportHtml(): Promise<void> {
   });
   if (target === null) return;
   // 經 render() 輸出 = 已過 DOMPurify，sanitize 不可被匯出繞過（SPEC 安全規格）
-  const html = buildExportHtml(fileName(), render(getContent()));
+  const bodyHtml = await renderMathForExport(render(getContent()));
+  const html = buildExportHtml(fileName(), bodyHtml);
   try {
     await writeTextFile(target, html);
   } catch (e) {
