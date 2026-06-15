@@ -52,6 +52,10 @@ const md: MarkdownIt = new MarkdownIt("default", {
   // 回傳以 <pre 開頭的字串時 markdown-it 直接採用，藉此輸出
   // <pre><code class="hljs ..."> 結構，讓主題 CSS 的 .hljs 選擇器吃得到。
   highlight(code: string, lang: string): string {
+    // mermaid：輸出 <pre class="mermaid">，post-render 由 preview.ts 懶載入 mermaid.js 渲染。
+    if (lang === "mermaid") {
+      return `<pre class="mermaid">${md.utils.escapeHtml(code)}</pre>`;
+    }
     // fence info string 來自文件作者，拼進 class 屬性前必先 escape 防注入。
     if (lang && hljs.getLanguage(lang)) {
       const { value } = hljs.highlight(code, { language: lang, ignoreIllegals: true });
