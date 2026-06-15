@@ -24,6 +24,7 @@ A lightweight Markdown reader — files open straight into full-width rendered v
 | **File association** | Right-click a `.md` in Finder → Open With → Plume, or make Plume the default. Double-clicking another `.md` while Plume is running loads it in the same window |
 | **Live preview** | In edit mode, updates within 50ms of typing; GFM tables, task lists, strikethrough, autolinks |
 | **Editor** | CodeMirror 6: line numbers, Markdown syntax highlighting, search & replace, undo/redo; CJK input methods tested — composition never breaks mid-character |
+| **Mermaid diagrams** | ` ```mermaid ` blocks render live as SVG — flowchart, sequence, class, ER, Gantt and more, with automatic theme-matched colors |
 | **Code highlighting** | highlight.js with a curated language subset — no payload tax for languages you never use |
 | **Safe rendering** | Every render passes through DOMPurify — opening someone else's `.md` with a stray `<script>` is a non-event |
 | **HTML export** | Produces a single self-styled `.html` that renders exactly like the preview |
@@ -68,6 +69,7 @@ flowchart LR
 | markdown-it | 14.x | Markdown → HTML (GFM: tables and strikethrough built in, linkify on) |
 | markdown-it-task-lists | 2.x | GFM task-list checkboxes |
 | highlight.js | 11.x | Code block highlighting (curated language subset only) |
+| mermaid | 11.x | Diagram rendering (lazy-loaded, `securityLevel: "strict"`) |
 | DOMPurify | 3.x | XSS sanitization of rendered output (non-negotiable, see SPEC) |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
 | Vitest | 3.x | Unit tests (rendering pipeline focus) |

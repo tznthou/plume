@@ -63,6 +63,18 @@ describe("renderer.render", () => {
     expect(render("")).toBe("");
   });
 
+  it("test_renderer_render_mermaid_outputsMermaidContainer", () => {
+    const out = render("```mermaid\ngraph TD\n  A --> B\n```");
+
+    const pre = parse(out).querySelector("pre.mermaid");
+    expect(pre).not.toBeNull();
+    // mermaid container 無 <code> 包裹、無 hljs class — 供 mermaid.js post-render 使用
+    expect(pre!.querySelector("code")).toBeNull();
+    expect(pre!.classList.contains("hljs")).toBe(false);
+    // 原始圖表文字被 escape 保留（含 -->）
+    expect(pre!.textContent).toContain("A --> B");
+  });
+
   it("test_renderer_render_unknownLang_fallsBackPlaintext", () => {
     const out = render('```foobar\nlet a = "<b>";\n```');
 

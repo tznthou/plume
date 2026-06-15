@@ -24,6 +24,7 @@
 | **檔案關聯** | macOS Finder 右鍵 → 以 Plume 打開，或設為 `.md` 的預設應用程式；app 已開著時再雙擊另一個 `.md` 會在同一視窗載入 |
 | **即時預覽** | 編輯模式下輸入後 50ms 內更新；GFM 表格、任務清單、刪除線、autolink |
 | **編輯器** | CodeMirror 6：行號、Markdown 語法高亮、搜尋取代、undo/redo；注音輸入法組字實測不斷字 |
+| **Mermaid 圖表** | ` ```mermaid ` 區塊即時渲染為 SVG——flowchart、sequence、class、ER、Gantt 等，跟隨佈景主題自動配色 |
 | **程式碼高亮** | highlight.js 只註冊常用語言子集，不為冷門語言付出載入成本 |
 | **安全渲染** | 所有輸出過 DOMPurify 消毒——開別人給的含 `<script>` 的 `.md` 也不怕 |
 | **匯出 HTML** | 產出單一自帶樣式的 `.html`，瀏覽器開啟與預覽所見一致 |
@@ -68,6 +69,7 @@ flowchart LR
 | markdown-it | 14.x | Markdown → HTML（GFM：表格/刪除線內建，linkify 開啟） |
 | markdown-it-task-lists | 2.x | GFM 任務清單 checkbox |
 | highlight.js | 11.x | 程式碼區塊語法上色（僅註冊常用語言子集） |
+| mermaid | 11.x | 圖表渲染（懶載入，`securityLevel: "strict"`） |
 | DOMPurify | 3.x | 渲染輸出 XSS 消毒（必備，見 SPEC 安全章節） |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
 | Vitest | 3.x | 單元測試（渲染管線為主） |

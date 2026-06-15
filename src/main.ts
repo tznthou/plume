@@ -111,7 +111,9 @@ document.querySelector("#btn-new")!.addEventListener("click", doNew);
 document.querySelector("#btn-open")!.addEventListener("click", doOpen);
 document.querySelector("#btn-save")!.addEventListener("click", doSave);
 document.querySelector("#btn-export")!.addEventListener("click", () => void exportHtml());
-document.querySelector("#btn-theme")!.addEventListener("click", () => void toggleTheme());
+document.querySelector("#btn-theme")!.addEventListener("click", () => {
+  void toggleTheme().then(() => update(render(getContent())));
+});
 document.querySelector("#btn-toc")!.addEventListener("click", () => {
   document.body.dataset.toc = document.body.dataset.toc === "open" ? "closed" : "open";
 });

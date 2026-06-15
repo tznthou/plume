@@ -553,6 +553,19 @@ html[data-theme="inkstone"] #preview pre {
   box-shadow: inset 0 0 26px rgba(31, 29, 26, 0.03);
 }
 
+/* mermaid 圖渲染後：移除 code block 外觀，SVG 置中 */
+#preview pre.mermaid {
+  text-align: center;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+#preview pre.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* 蓋掉 padding/背景，底色統一交給 pre */
 #preview pre code {
   padding: 0;

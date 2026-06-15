@@ -4,6 +4,18 @@
 
 This file tracks notable changes to Plume. Format inspired by [Keep a Changelog](https://keepachangelog.com); versions follow [SemVer](https://semver.org).
 
+## [Unreleased]
+
+### Added
+
+- Mermaid diagram rendering: embed diagrams via ` ```mermaid ` fenced blocks — flowchart, sequence, class, ER, Gantt and more render as SVG in the preview pane. Read-only support: makes other people's diagrams visible without needing to edit them
+- Diagram theme sync: dark (Vol de Nuit) and light (Inkstone) themes automatically switch mermaid color scheme; toggling the app theme redraws diagrams immediately
+
+### Technical Notes
+
+- mermaid.js is lazy-loaded: dynamically imported only when a mermaid block is first encountered — files without mermaid pay no bundle cost
+- Security: mermaid runs with `securityLevel: "strict"` (internal DOMPurify + HTML encoding); post-render `cloneNode(true)` strips `addEventListener` bindings without a second DOMPurify pass (DOMPurify v3.1.7+ foreignObject mXSS mitigation strips diagram text labels)
+
 ## [0.4.0] - 2026-06-15
 
 ### Added

@@ -38,7 +38,7 @@ flowchart TB
 | `src/main.ts` | 進入點：初始化各模組、註冊快捷鍵（Cmd+N/O/S/Shift+S）、關閉攔截 | editor, file, recent, preview |
 | `src/editor.ts` | 封裝 CM6：建立 EditorView（行號、lang-markdown、基礎快捷鍵）、提供 `getContent()` / `setContent()` / `onChange(cb)` | codemirror |
 | `src/renderer.ts` | **純函式** `render(md: string): string`：markdown-it（GFM + linkify + task-lists）→ highlight.js → DOMPurify | markdown-it, hljs, dompurify |
-| `src/preview.ts` | 接收 HTML 更新預覽 DOM、同步捲動（編輯→預覽單向比例式）、攔截 `a[href^="http"]` 點擊改走 opener | renderer 輸出, plugin-opener |
+| `src/preview.ts` | 接收 HTML 更新預覽 DOM、同步捲動（編輯→預覽單向比例式）、攔截 `a[href^="http"]` 點擊改走 opener、mermaid 圖表懶載入渲染（`securityLevel: 'strict'`，雙主題同步） | renderer 輸出, plugin-opener, mermaid（動態 import） |
 | `src/file.ts` | 開/存/另存/新增/匯出 HTML/外部路徑開檔（`openExternal`）；dirty 確認流程；維護 `DocState`（path/dirty）；更新視窗標題（`檔名 ●`）。內容唯一真相來源是 CM6 EditorState，**不另存字串副本** | plugin-dialog, plugin-fs, core(invoke) |
 | `src/recent.ts` | 最近 10 筆（去重、新→舊）；讀寫 store；失效項移除 | plugin-store, file |
 | `src-tauri/src/lib.rs` | Tauri builder：註冊五個官方 plugin + 兩個自訂 command（`grant_scope` / `get_opened_urls`）；`RunEvent::Opened` 檔案關聯處理 | tauri plugins, tauri-plugin-fs(FsExt) |
@@ -71,6 +71,12 @@ flowchart TB
 
 ```
 md 字串 → markdown-it.render() → raw HTML → DOMPurify.sanitize() → 預覽 innerHTML
+                                                                         ↓（含 mermaid block 時）
+                                                               動態 import mermaid.js
+                                                                         ↓
+                                                               mermaid.run() → SVG
+                                                                         ↓
+                                                               cloneNode(true)（剝 event listener）
 ```
 
 | 環節 | 設定 | 理由 |
@@ -79,10 +85,11 @@ md 字串 → markdown-it.render() → raw HTML → DOMPurify.sanitize() → 預
 | `html: true` | 允許 inline HTML 進 parser | 技術文件常見 `<img width>` 等排版標籤；安全交給 DOMPurify 把關 |
 | `linkify: true` | 裸網址自動成連結 | GFM autolink 行為 |
 | 插件 | `markdown-it-task-lists` | GFM checkbox（渲染為 disabled checkbox） |
-| highlight 回呼 | highlight.js，僅註冊子集：js/ts/python/rust/bash/json/yaml/html/css/sql/go/java/c/cpp/markdown/diff；未標注或未知語言 fallback plaintext，**不開自動偵測** | 控制 bundle 與渲染時間 |
+| highlight 回呼 | highlight.js，僅註冊子集：js/ts/python/rust/bash/json/yaml/html/css/sql/go/java/c/cpp/markdown/diff；`lang === "mermaid"` 時輸出 `<pre class="mermaid">` 容器交由 post-render 處理；未標注或未知語言 fallback plaintext，**不開自動偵測** | 控制 bundle 與渲染時間 |
 | DOMPurify | 預設白名單（擋 `<script>`、event handler 屬性、`javascript:` URI） | 見安全章節 |
+| mermaid（post-render） | 懶載入 `import("mermaid")`；`securityLevel: "strict"`（內部 DOMPurify + HTML encode）；theme 跟隨 app 主題（vol-de-nuit→dark / inkstone→default）；generation 計數器防 stale DOM 操作 | 閱讀器核心：別人的 `.md` 有 mermaid 圖要能看到 |
 
-渲染觸發：CM6 `updateListener` → `docChanged` → debounce 50ms → `render()` → `preview.update()`。同步呼叫鏈，無 async、無 race。（debounce 原定 150ms，2026-06-11 Task 3 驗收時依子超實際手感調為 50ms，注音組字驗證正常。）
+渲染觸發：CM6 `updateListener` → `docChanged` → debounce 50ms → `render()` → `preview.update()`。同步呼叫鏈，無 async、無 race。Mermaid 渲染為唯一 async 後處理步驟（懶載入 + `mermaid.run()`），不阻塞主渲染流程。（debounce 原定 150ms，2026-06-11 Task 3 驗收時依子超實際手感調為 50ms，注音組字驗證正常。）
 
 ## 資料模型
 
@@ -113,7 +120,7 @@ interface RecentStore {
 
 | 防線 | 實作 |
 |------|------|
-| 輸出消毒 | 所有 `render()` 輸出必過 DOMPurify，預設白名單，此環節**不可被任何功能繞過**（含匯出 HTML） |
+| 輸出消毒 | 所有 `render()` 輸出必過 DOMPurify，預設白名單，此環節**不可被任何功能繞過**（含匯出 HTML）。Mermaid SVG 不經 DOMPurify 二次處理（foreignObject 衝突），安全靠 mermaid `securityLevel: "strict"`（內部 DOMPurify + HTML encode），post-render 用 `cloneNode(true)` 剝除 `addEventListener` 綁定 |
 | CSP | `tauri.conf.json` 設定：`default-src 'self'; img-src 'self' asset: https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com`；不允許遠端 script。style/font 僅白名單 Google Fonts 兩域（主題字體），script-src 仍鎖 'self' |
 | 權限最小化 | capabilities 僅宣告上表權限；fs scope 不開全域路徑 |
 | 連結外開 | 預覽區連結一律 opener 走系統瀏覽器，webview 不導航至外部 URL |
