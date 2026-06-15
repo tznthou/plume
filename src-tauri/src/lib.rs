@@ -30,8 +30,8 @@ fn find_readme(dir: &std::path::Path) -> Option<PathBuf> {
     entries.filter_map(|e| e.ok()).find_map(|entry| {
         let name = entry.file_name();
         let lower = name.to_string_lossy().to_lowercase();
-        if matches!(lower.as_str(), "readme.md" | "readme.markdown") && entry.path().is_file() {
-            Some(entry.path())
+        if matches!(lower.as_str(), "readme.md" | "readme.markdown") {
+            entry.path().canonicalize().ok().filter(|p| p.is_file())
         } else {
             None
         }
