@@ -5,6 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import DOMPurify from "dompurify";
 import hljsThemeCss from "highlight.js/styles/github.css?raw";
 import { getContent, setContent } from "./editor";
 import { escapeHtml, render } from "./renderer";
@@ -205,13 +206,15 @@ async function renderMathForExport(html: string): Promise<string> {
   const katex = (await import("katex")).default;
   for (const el of els) {
     const displayMode = el.hasAttribute("data-math-block");
-    el.innerHTML = katex.renderToString(el.textContent!, {
-      displayMode,
-      throwOnError: false,
-      trust: false,
-      maxSize: 20,
-      output: "mathml",
-    });
+    el.innerHTML = DOMPurify.sanitize(
+      katex.renderToString(el.textContent!, {
+        displayMode,
+        throwOnError: false,
+        trust: false,
+        maxSize: 20,
+        output: "mathml",
+      }),
+    );
     el.removeAttribute("data-math-inline");
     el.removeAttribute("data-math-block");
   }
@@ -236,6 +239,15 @@ ${bodyHtml}
 </body>
 </html>
 `;
+}
+
+export async function copyHtml(): Promise<void> {
+  const html = await renderMathForExport(render(getContent()));
+  try {
+    await navigator.clipboard.writeText(html);
+  } catch (e) {
+    await message(`複製失敗：${String(e)}`, { title: "複製失敗", kind: "error" });
+  }
 }
 
 export async function exportHtml(): Promise<void> {
