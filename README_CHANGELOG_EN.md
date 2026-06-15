@@ -4,6 +4,22 @@
 
 This file tracks significant changes to the README. Format inspired by [Keep a Changelog](https://keepachangelog.com); version numbers follow CalVer (YYYY-MM-DD).
 
+## [2026-06-15]
+
+### Added
+
+- Four new Route A feature rows in the features table: read-only mode default, table of contents, fullscreen reading, and folder-drop README discovery
+- `toc.ts` module node in the architecture diagram with a Renderer → TOC edge
+- `toc.ts` entry in the project layout (heading extraction + click-to-scroll)
+- E shortcut (toggle read/edit mode) added to the shortcuts row
+
+### Changed
+
+- Tagline rewritten from "write on the left, watch it render on the right" to reader-first positioning: "files open straight into full-width rendered view; editing is one click away"
+- Design principle paragraph now leads with "read first, edit on demand"; grant_scope description updated to mention folder README discovery
+- `index.html` description changed from "split panes" to "read/edit dual mode"; `main.ts` adds "mode switching"; `style.css` adds "read/edit modes"
+- "Drag & drop" merged into "Drag & drop / folders"; "Synced scrolling" folded under edit-mode live preview instead of a standalone row
+
 ## [2026-06-13]
 
 ### Added

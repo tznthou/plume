@@ -4,6 +4,25 @@
 
 This file tracks notable changes to Plume. Format inspired by [Keep a Changelog](https://keepachangelog.com); versions follow [SemVer](https://semver.org).
 
+## [0.4.0] - 2026-06-15
+
+### Added
+
+- Read-only mode as default: files open in full-width reading view (preview centered, max 800px). Click "編輯" in the toolbar or press Cmd/Ctrl+E to switch back to split-pane editing. New files go straight to edit mode
+- Folder drop: drag a folder onto Plume and it automatically opens its README.md (case-insensitive match) — drop a project folder and see its README instantly
+- Table of Contents (TOC): in read mode, click "目錄" to open a sidebar listing all h1–h6 headings with hierarchical indentation. Click any heading to smooth-scroll to it. Updates automatically on each edit
+- Fullscreen reading: in read mode, click "全螢幕" to hide the toolbar and status bar, leaving just content and scrolling. A ✕ button at the top-right corner or Escape exits fullscreen. The TOC sidebar remains usable
+
+### Security
+
+- README paths discovered inside folders are canonicalized to resolve symlinks before granting fs scope, consistent with the direct-file security model
+- Removed `data:` from CSP `img-src` — the noise texture lives in CSS `background-image` (not `<img>`), so the removal doesn't affect functionality but hardens defense-in-depth against potential DOMPurify SVG bypasses
+
+### Changed
+
+- The night-flight fox illustration repositions to the bottom-right corner (mirrored) in read mode to complement the full-width preview layout
+- Inkstone panel background color unified into a `--bg-bar` CSS variable, replacing three hardcoded color values
+
 ## [0.3.0] - 2026-06-13
 
 ### Added

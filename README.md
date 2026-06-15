@@ -7,7 +7,7 @@
 
 [English](README_EN.md)
 
-輕量 Markdown 編輯器——左邊寫，右邊即時看渲染。Tauri 2 桌面應用，開了就能寫，存了就能走。
+輕量 Markdown 閱讀器——開檔就是渲染好的全幅閱讀，需要改才切編輯。Tauri 2 桌面應用，讀 `.md` 不必繞路。
 
 <p align="center">
   <img src="docs/images/screenshot-dark.webp" alt="Plume 夜航主題截圖" width="720" />
@@ -17,16 +17,18 @@
 
 | 功能 | 說明 |
 |------|------|
-| **即時預覽** | 輸入後 50ms 內更新；GFM 表格、任務清單、刪除線、autolink |
+| **閱讀模式預設** | 開檔即全幅閱讀（預覽置中 800px），按「編輯」或 Cmd/Ctrl+E 才切回左右分欄；新檔則直接進入編輯 |
+| **目錄導覽** | 閱讀模式下按「目錄」展開側邊 TOC，h1–h6 階層縮排，點擊跳轉，內容異動自動更新 |
+| **全螢幕閱讀** | 隱藏工具列與狀態列，只留內容與捲動；右上角 ✕ 或 Escape 退出，TOC 仍可使用 |
+| **拖曳開檔 / 資料夾** | 拖 `.md` 進視窗直接開啟；拖資料夾自動找 README.md 開啟——開發者丟專案即見 README |
+| **檔案關聯** | macOS Finder 右鍵 → 以 Plume 打開，或設為 `.md` 的預設應用程式；app 已開著時再雙擊另一個 `.md` 會在同一視窗載入 |
+| **即時預覽** | 編輯模式下輸入後 50ms 內更新；GFM 表格、任務清單、刪除線、autolink |
 | **編輯器** | CodeMirror 6：行號、Markdown 語法高亮、搜尋取代、undo/redo；注音輸入法組字實測不斷字 |
 | **程式碼高亮** | highlight.js 只註冊常用語言子集，不為冷門語言付出載入成本 |
 | **安全渲染** | 所有輸出過 DOMPurify 消毒——開別人給的含 `<script>` 的 `.md` 也不怕 |
-| **同步捲動** | 編輯區捲動，預覽區按比例跟隨 |
 | **匯出 HTML** | 產出單一自帶樣式的 `.html`，瀏覽器開啟與預覽所見一致 |
 | **最近檔案** | 最近 10 筆跨重啟有效，檔案存取權限一併記住 |
-| **拖曳開檔** | 把 `.md` 拖進視窗就能開——拖曳中有跟著佈景走的邊框提示，有未存內容會先確認 |
-| **檔案關聯** | macOS Finder 右鍵 → 以 Plume 打開，或設為 `.md` 的預設應用程式；app 已開著時再雙擊另一個 `.md` 會在同一視窗載入 |
-| **快捷鍵** | Cmd/Ctrl + N 新檔、O 開檔、S 存檔、Shift+S 另存；未儲存變更關閉視窗會攔下確認 |
+| **快捷鍵** | Cmd/Ctrl + N 新檔、O 開檔、S 存檔、Shift+S 另存、E 切換閱讀/編輯；未儲存變更關閉視窗會攔下確認 |
 
 ## 系統架構
 
@@ -36,6 +38,7 @@ flowchart LR
         Editor["editor.ts<br/>CodeMirror 6"]
         Renderer["renderer.ts<br/>markdown-it + hljs<br/>+ DOMPurify"]
         Preview["preview.ts<br/>預覽更新 + 同步捲動"]
+        TOC["toc.ts<br/>目錄導覽（h1-h6）"]
         File["file.ts<br/>開檔 / 存檔 / 匯出<br/>文件狀態"]
         Recent["recent.ts<br/>最近檔案"]
     end
@@ -45,6 +48,7 @@ flowchart LR
     end
     Editor -- "onChange (debounce 50ms)" --> Renderer
     Renderer --> Preview
+    Renderer --> TOC
     File -- IPC --> Plugins
     Recent -- IPC --> Plugins
     Preview -- "外部連結 IPC" --> Plugins
@@ -52,7 +56,7 @@ flowchart LR
     Commands -- "fs scope 授權" --> Plugins
 ```
 
-**設計原則**：Markdown 渲染管線完整留在前端（同步、零 IPC、零 race condition）；Rust 端負責檔案 I/O、對話框、系統整合，以及兩個自訂 command——`grant_scope`（拖曳與檔案關聯的外部路徑授權，含 symlink 解析與副檔名驗證）和 `get_opened_urls`（OS 傳入的冷啟動檔案路徑）。這是 Tauri 相對 Electron 的記憶體優勢來源，也避免把解析搬到 Rust 反而被 IPC 序列化成本吃掉的陷阱。
+**設計原則**：讀為主、改為輔——開檔先進全幅閱讀，編輯是按需切換的第二動作。Markdown 渲染管線完整留在前端（同步、零 IPC、零 race condition）；Rust 端負責檔案 I/O、對話框、系統整合，以及兩個自訂 command——`grant_scope`（拖曳與檔案關聯的外部路徑授權，含 symlink 解析與副檔名驗證，也處理資料夾拖曳的 README 查找）和 `get_opened_urls`（OS 傳入的冷啟動檔案路徑）。
 
 ## 技術棧
 
@@ -104,15 +108,16 @@ npm run test          # Vitest 單元測試
 
 ```
 markdown-tool/
-├── index.html              # 版面骨架：工具列 + 左右分割
+├── index.html              # 版面骨架：工具列 + 閱讀/編輯雙模式
 ├── src/                    # 前端（Vanilla TS）
-│   ├── main.ts             # 進入點：模組組裝、快捷鍵註冊
+│   ├── main.ts             # 進入點：模組組裝、模式切換、快捷鍵
 │   ├── editor.ts           # CodeMirror 6 封裝
 │   ├── renderer.ts         # markdown-it + hljs + DOMPurify 渲染管線
 │   ├── preview.ts          # 預覽區更新、同步捲動、外部連結攔截
+│   ├── toc.ts              # 目錄導覽：heading 擷取 + 點擊跳轉
 │   ├── file.ts             # 開檔/存檔/另存/匯出 HTML、文件狀態（路徑、dirty）
 │   ├── recent.ts           # 最近開啟檔案（plugin-store）
-│   └── style.css           # 版面 + 預覽 typography
+│   └── style.css           # 版面 + 雙主題 + 閱讀/編輯模式 + 預覽 typography
 ├── src-tauri/              # Rust 核心
 │   ├── src/lib.rs          # Tauri 啟動 + plugin 註冊 + 自訂 commands
 │   ├── capabilities/       # IPC 權限宣告（最小化原則）

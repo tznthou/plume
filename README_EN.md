@@ -7,7 +7,7 @@
 
 [中文](README.md)
 
-A lightweight Markdown editor — write on the left, watch it render on the right. Tauri 2 desktop app: opens fast, saves your file, gets out of the way.
+A lightweight Markdown reader — files open straight into full-width rendered view; editing is one click away when you need it. Tauri 2 desktop app that gets you from `.md` to reading without the detour.
 
 <p align="center">
   <img src="docs/images/screenshot-dark.webp" alt="Plume Vol de Nuit theme screenshot" width="720" />
@@ -17,16 +17,18 @@ A lightweight Markdown editor — write on the left, watch it render on the righ
 
 | Feature | What it does |
 |---------|--------------|
-| **Live preview** | Updates within 50ms of typing; GFM tables, task lists, strikethrough, autolinks |
+| **Read mode by default** | Files open in full-width reading view (preview centered at 800px). Click "編輯" or Cmd/Ctrl+E to switch to split-pane editing; new files go straight to edit mode |
+| **Table of Contents** | In read mode, click "目錄" to open a sidebar TOC listing h1–h6 headings with hierarchical indentation. Click any heading to scroll to it; updates automatically on each edit |
+| **Fullscreen reading** | Hides the toolbar and status bar, leaving just content and scrolling. Exit with the ✕ button at top-right or Escape; TOC remains usable |
+| **Drag & drop / folders** | Drop a `.md` to open it; drop a folder to auto-discover and open its README.md — toss a project folder onto Plume and see its README instantly |
+| **File association** | Right-click a `.md` in Finder → Open With → Plume, or make Plume the default. Double-clicking another `.md` while Plume is running loads it in the same window |
+| **Live preview** | In edit mode, updates within 50ms of typing; GFM tables, task lists, strikethrough, autolinks |
 | **Editor** | CodeMirror 6: line numbers, Markdown syntax highlighting, search & replace, undo/redo; CJK input methods tested — composition never breaks mid-character |
 | **Code highlighting** | highlight.js with a curated language subset — no payload tax for languages you never use |
 | **Safe rendering** | Every render passes through DOMPurify — opening someone else's `.md` with a stray `<script>` is a non-event |
-| **Synced scrolling** | Scroll the editor and the preview follows proportionally |
 | **HTML export** | Produces a single self-styled `.html` that renders exactly like the preview |
 | **Recent files** | Last 10 files survive restarts, file-access permissions included |
-| **Drag & drop** | Drop a `.md` onto the window to open it — a themed border lights up while hovering, and unsaved work gets a save-or-discard prompt first |
-| **File association** | Right-click a `.md` in Finder → Open With → Plume, or make Plume the default. Double-clicking another `.md` while Plume is running loads it in the same window |
-| **Shortcuts** | Cmd/Ctrl + N new, O open, S save, Shift+S save-as; closing with unsaved changes prompts first |
+| **Shortcuts** | Cmd/Ctrl + N new, O open, S save, Shift+S save-as, E toggle read/edit; closing with unsaved changes prompts first |
 
 ## Architecture
 
@@ -36,6 +38,7 @@ flowchart LR
         Editor["editor.ts<br/>CodeMirror 6"]
         Renderer["renderer.ts<br/>markdown-it + hljs<br/>+ DOMPurify"]
         Preview["preview.ts<br/>preview updates + synced scroll"]
+        TOC["toc.ts<br/>table of contents (h1-h6)"]
         File["file.ts<br/>open / save / export<br/>document state"]
         Recent["recent.ts<br/>recent files"]
     end
@@ -45,6 +48,7 @@ flowchart LR
     end
     Editor -- "onChange (debounce 50ms)" --> Renderer
     Renderer --> Preview
+    Renderer --> TOC
     File -- IPC --> Plugins
     Recent -- IPC --> Plugins
     Preview -- "external links via IPC" --> Plugins
@@ -52,7 +56,7 @@ flowchart LR
     Commands -- "fs scope grant" --> Plugins
 ```
 
-**Design principle:** the entire Markdown pipeline stays in the frontend — synchronous, zero IPC, zero race conditions. Rust handles file I/O, dialogs, OS integration, and two custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation) and `get_opened_urls` (cold-start file paths from the OS). That split is where Tauri's memory advantage over Electron comes from, and it sidesteps the trap of moving parsing into Rust just to hand the gains back in IPC serialization.
+**Design principle:** read first, edit on demand — files open into full-width reading view; editing is a deliberate switch, not the default. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions). Rust handles file I/O, dialogs, OS integration, and two custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation; also handles folder drops by discovering README.md) and `get_opened_urls` (cold-start file paths from the OS).
 
 ## Tech stack
 
@@ -104,15 +108,16 @@ npm run test          # Vitest unit tests
 
 ```
 markdown-tool/
-├── index.html              # layout skeleton: toolbar + split panes
+├── index.html              # layout skeleton: toolbar + read/edit dual mode
 ├── src/                    # frontend (Vanilla TS)
-│   ├── main.ts             # entry point: module wiring, shortcut registration
+│   ├── main.ts             # entry point: module wiring, mode switching, shortcuts
 │   ├── editor.ts           # CodeMirror 6 wrapper
 │   ├── renderer.ts         # markdown-it + hljs + DOMPurify pipeline
 │   ├── preview.ts          # preview updates, synced scroll, external link handling
+│   ├── toc.ts              # table of contents: heading extraction + click-to-scroll
 │   ├── file.ts             # open/save/save-as/HTML export, document state (path, dirty)
 │   ├── recent.ts           # recent files (plugin-store)
-│   └── style.css           # layout + preview typography
+│   └── style.css           # layout + dual themes + read/edit modes + preview typography
 ├── src-tauri/              # Rust core
 │   ├── src/lib.rs          # Tauri bootstrap + plugins + custom commands
 │   ├── capabilities/       # IPC permission declarations (least privilege)
