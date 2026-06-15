@@ -145,8 +145,10 @@ void getCurrentWebview().onDragDropEvent((event) => {
   const { type } = event.payload;
   if (type === "drop") {
     document.body.classList.remove("drag-hover");
-    const md = event.payload.paths.find((p) => MD_EXT.test(p));
+    const paths = event.payload.paths;
+    const md = paths.find((p) => MD_EXT.test(p));
     if (md) openExternalWithRefresh(md);
+    else if (paths.length > 0) openExternalWithRefresh(paths[0]);
   } else if (type === "enter" || type === "over") {
     document.body.classList.add("drag-hover");
   } else {

@@ -9,16 +9,33 @@ struct OpenedUrls(Mutex<Option<Vec<tauri::Url>>>);
 fn grant_scope(app: tauri::AppHandle, path: String) -> Result<String, String> {
     let p = PathBuf::from(&path);
     let canonical = p.canonicalize().map_err(|e| e.to_string())?;
-    if !canonical.is_file() {
-        return Err("Path is not a regular file".into());
-    }
-    if !is_markdown(&canonical) {
-        return Err("Only .md and .markdown files are allowed".into());
-    }
+    let target = if canonical.is_file() {
+        if !is_markdown(&canonical) {
+            return Err("Only .md and .markdown files are allowed".into());
+        }
+        canonical
+    } else if canonical.is_dir() {
+        find_readme(&canonical).ok_or("No README.md found in this folder")?
+    } else {
+        return Err("Path is not a file or folder".into());
+    };
     app.fs_scope()
-        .allow_file(&canonical)
+        .allow_file(&target)
         .map_err(|e| e.to_string())?;
-    Ok(canonical.to_string_lossy().into_owned())
+    Ok(target.to_string_lossy().into_owned())
+}
+
+fn find_readme(dir: &std::path::Path) -> Option<PathBuf> {
+    let entries = std::fs::read_dir(dir).ok()?;
+    entries.filter_map(|e| e.ok()).find_map(|entry| {
+        let name = entry.file_name();
+        let lower = name.to_string_lossy().to_lowercase();
+        if matches!(lower.as_str(), "readme.md" | "readme.markdown") && entry.path().is_file() {
+            Some(entry.path())
+        } else {
+            None
+        }
+    })
 }
 
 #[tauri::command]
