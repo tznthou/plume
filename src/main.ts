@@ -41,6 +41,7 @@ function setMode(mode: "read" | "edit"): void {
   document.body.dataset.mode = mode;
   if (mode === "edit") {
     delete document.body.dataset.toc;
+    delete document.body.dataset.fullscreen;
     remeasure();
   }
 }
@@ -110,6 +111,12 @@ document.querySelector("#btn-theme")!.addEventListener("click", () => void toggl
 document.querySelector("#btn-toc")!.addEventListener("click", () => {
   document.body.dataset.toc = document.body.dataset.toc === "open" ? "closed" : "open";
 });
+document.querySelector("#btn-fullscreen")!.addEventListener("click", () => {
+  document.body.dataset.fullscreen = "on";
+});
+document.querySelector("#btn-exit-fullscreen")!.addEventListener("click", () => {
+  delete document.body.dataset.fullscreen;
+});
 document.querySelector("#btn-mode")!.addEventListener("click", () => {
   setMode(document.body.dataset.mode === "read" ? "edit" : "read");
 });
@@ -117,6 +124,10 @@ document.querySelector("#btn-mode")!.addEventListener("click", () => {
 // ----- 快捷鍵 Cmd(mac)/Ctrl(win) + N / O / S / Shift+S -----
 
 window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.body.dataset.fullscreen === "on") {
+    delete document.body.dataset.fullscreen;
+    return;
+  }
   if (!e.metaKey && !e.ctrlKey) return;
   switch (e.key.toLowerCase()) {
     case "n":
