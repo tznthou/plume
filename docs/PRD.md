@@ -71,7 +71,7 @@
 | F-06 | 匯出 HTML | 自帶樣式的獨立 HTML 檔 | P1 |
 | F-07 | 最近檔案 | 最近 10 筆，跨 session 有效 | P1 |
 | F-08 | 外部連結外開 | 預覽區點擊 http(s) 連結用系統瀏覽器開啟，不在 app 內導航 | P1 |
-| B-01 | Dark mode 跟隨系統 | macOS 外觀切換時介面與預覽同步 | Backlog |
+| B-01 | Dark mode 跟隨系統 | 三態主題（Night Flight/Inkstone/Auto）跟隨系統明暗 + 閱讀字型/大小偏好 | Done |
 | B-02 | 原生選單列 | Plume/File/Edit/View/Help 原生選單 + ⌘/ 快捷鍵提示浮層 | Done |
 | B-03 | 多分頁 | 同時編輯多個文件 | Backlog |
 | B-04 | 超大檔優化 | >1MB 文件的增量渲染（屆時再評估 Rust 端解析） | Backlog |
