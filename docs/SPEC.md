@@ -62,6 +62,7 @@ flowchart TB
 | 冷啟動檔案路徑取得 | `invoke("get_opened_urls")` | `allow-get-opened-urls`（自訂 command；回傳 OS 傳入的檔案路徑後清空暫存） |
 | 拖曳事件 | `getCurrentWebview().onDragDropEvent()` | 無額外權限（Tauri 2 core 內建） |
 | 暖啟動檔案事件 | `listen("file-open")` | 無額外權限（`core:event:default` 已含 listen） |
+| 原生選單列 | `@tauri-apps/api/menu`（JS 端建構） | `core:menu:default` |
 
 關鍵機制：`plugin-fs` 預設 scope 不含使用者任意路徑；經 `plugin-dialog` 選取的路徑會被動態加入 fs scope，`plugin-persisted-scope` 再把這份授權跨 session 保存——這是「最近檔案重啟後仍可開」的依賴鏈，缺一不可。此鏈路已完整實測通過：前半段（dialog 授權 → fs scope → readTextFile）於 2026-06-11 Task 0 IPC spike 驗證；persisted-scope 跨 session 段於同日 Task 6 驗收驗證（重啟後不經 dialog 直開最近檔案成功）。
 

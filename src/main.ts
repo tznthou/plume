@@ -26,6 +26,8 @@ import { getRecent } from "./recent";
 import { initTheme, toggleTheme } from "./theme";
 import { initStatusbar, setDirty, updateStats } from "./statusbar";
 import { initToc, updateToc } from "./toc";
+import { initMenu } from "./menu";
+import { toggleShortcuts, hideShortcuts } from "./shortcuts";
 
 const editorEl = document.querySelector<HTMLElement>("#editor")!;
 const previewEl = document.querySelector<HTMLElement>("#preview")!;
@@ -52,10 +54,12 @@ function setMode(mode: "read" | "edit"): void {
 function toggleMode(): void {
   setMode(document.body.dataset.mode === "read" ? "edit" : "read");
 }
+
+function toggleToc(): void {
+  document.body.dataset.toc = document.body.dataset.toc === "open" ? "closed" : "open";
+}
 void initTheme(); // index.html 已帶預設主題，這裡載入使用者上次選擇
 
-let typewriterOn = false;
-let focusOn = false;
 let debounceTimer: number | undefined;
 onChange(() => {
   markDirty();
@@ -119,9 +123,7 @@ document.querySelector("#btn-export")!.addEventListener("click", () => void expo
 document.querySelector("#btn-theme")!.addEventListener("click", () => {
   void toggleTheme().then(() => update(render(getContent())));
 });
-document.querySelector("#btn-toc")!.addEventListener("click", () => {
-  document.body.dataset.toc = document.body.dataset.toc === "open" ? "closed" : "open";
-});
+document.querySelector("#btn-toc")!.addEventListener("click", toggleToc);
 document.querySelector("#btn-fullscreen")!.addEventListener("click", () => {
   document.body.dataset.fullscreen = "on";
 });
@@ -132,50 +134,37 @@ document.querySelector("#btn-mode")!.addEventListener("click", () => {
   toggleMode();
 });
 
-// ----- 快捷鍵 Cmd(mac)/Ctrl(win) + N / O / S / Shift+S -----
+// ----- 原生選單列 -----
+
+void initMenu({
+  onNew: doNew,
+  onOpen: doOpen,
+  onSave: doSave,
+  onSaveAs: doSaveAs,
+  onExport: () => void exportHtml(),
+  onToggleMode: toggleMode,
+  onToggleFocus: (checked) => {
+    reconfigureFocus(checked ? focusExtension() : []);
+  },
+  onToggleTypewriter: (checked) => {
+    reconfigureTypewriter(checked ? typewriterExtension() : []);
+  },
+  onToggleToc: toggleToc,
+  onFullscreen: () => {
+    document.body.dataset.fullscreen = "on";
+  },
+  onCopyHtml: () => void copyHtml(),
+  onShortcuts: toggleShortcuts,
+});
+
+// ----- Escape（選單 accelerator 不處理的按鍵） -----
 
 window.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && document.body.dataset.fullscreen === "on") {
-    delete document.body.dataset.fullscreen;
-    return;
-  }
-  if (!e.metaKey && !e.ctrlKey) return;
-  switch (e.key.toLowerCase()) {
-    case "n":
-      e.preventDefault();
-      doNew();
-      break;
-    case "o":
-      e.preventDefault();
-      doOpen();
-      break;
-    case "s":
-      e.preventDefault();
-      if (e.shiftKey) doSaveAs();
-      else doSave();
-      break;
-    case "c":
-      if (e.shiftKey) {
-        e.preventDefault();
-        void copyHtml();
-      }
-      break;
-    case "f":
-      if (e.shiftKey) {
-        e.preventDefault();
-        focusOn = !focusOn;
-        reconfigureFocus(focusOn ? focusExtension() : []);
-      }
-      break;
-    case "t":
-      e.preventDefault();
-      typewriterOn = !typewriterOn;
-      reconfigureTypewriter(typewriterOn ? typewriterExtension() : []);
-      break;
-    case "e":
-      e.preventDefault();
-      toggleMode();
-      break;
+  if (e.key === "Escape") {
+    if (hideShortcuts()) return;
+    if (document.body.dataset.fullscreen === "on") {
+      delete document.body.dataset.fullscreen;
+    }
   }
 });
 

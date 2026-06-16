@@ -1128,6 +1128,103 @@ body.drag-hover::after {
   opacity: 1;
 }
 
+/* ===== Shortcuts Overlay (⌘/) ===== */
+
+.shortcuts-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.shortcuts-overlay.visible {
+  opacity: 1;
+}
+
+.shortcuts-overlay[hidden] {
+  display: none;
+}
+
+.shortcuts-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px 32px;
+  max-width: 420px;
+  width: 88%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  transform: scale(0.96);
+  transition: transform 0.15s;
+}
+
+.shortcuts-overlay.visible .shortcuts-card {
+  transform: scale(1);
+}
+
+html[data-theme="inkstone"] .shortcuts-card {
+  box-shadow: 0 4px 20px rgba(31, 29, 26, 0.18);
+}
+
+.shortcuts-card h2 {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--fg-muted);
+  margin: 0 0 20px;
+  text-transform: uppercase;
+}
+
+.shortcuts-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.shortcuts-grid section h3 {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  color: var(--fg-muted);
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+.shortcuts-grid dl {
+  margin: 0;
+}
+
+.shortcuts-grid dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+}
+
+.shortcuts-grid kbd {
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  padding: 1px 7px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--fg);
+  min-width: 24px;
+  text-align: center;
+}
+
+.shortcuts-grid dd {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  color: var(--fg);
+}
+
 /* ===== 動效全關 ===== */
 
 @media (prefers-reduced-motion: reduce) {
