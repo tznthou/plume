@@ -159,6 +159,32 @@ html[data-theme="inkstone"] #toolbar button:hover {
   transform: scale(0.98);
 }
 
+/* 寫作三態 segmented：撰｜參｜閱（三段相連，當前態高亮直達） */
+#mode-switch {
+  display: flex;
+}
+
+#mode-switch button {
+  border-radius: 0;
+  border-left-width: 0;
+}
+
+#mode-switch button:first-child {
+  border-radius: 6px 0 0 6px;
+  border-left-width: 1px;
+}
+
+#mode-switch button:last-child {
+  border-radius: 0 6px 6px 0;
+}
+
+#mode-switch button[aria-pressed="true"],
+#mode-switch button[aria-pressed="true"]:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
 /* 主題切換鈕：顯示當前主題名 / auto */
 html[data-theme="vol-de-nuit"] #btn-theme .theme-name::before {
   content: "夜航";
@@ -979,16 +1005,19 @@ html[data-theme="vol-de-nuit"] #illos img {
   animation: pane-in 0.3s ease-out 0.1s backwards;
 }
 
-/* ===== 閱讀/編輯模式 ===== */
+/* ===== 寫作三態：撰（write）/ 參（split）/ 閱（read） ===== */
 
+/* 編輯專用鈕（新增/儲存）只在「閱」隱藏；撰、參都顯示 */
 body[data-mode="read"] .edit-only {
   display: none;
 }
 
-body[data-mode="edit"] .read-only {
+/* 閱讀專用鈕（目錄/全螢幕）只在「閱」顯示；撰、參都隱藏 */
+body:not([data-mode="read"]) .read-only {
   display: none;
 }
 
+/* 閱：隱藏編輯器，預覽置中沉浸 */
 body[data-mode="read"] #editor {
   display: none;
 }
@@ -999,18 +1028,21 @@ body[data-mode="read"] #preview {
   margin: 0 auto;
 }
 
+/* 撰：隱藏預覽，編輯器置中沉浸（對「閱」做對稱減法；Focus/Typewriter 只在此生效） */
+body[data-mode="write"] #preview {
+  display: none;
+}
+
+body[data-mode="write"] #editor {
+  flex: 1 1 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  border-right: none;
+}
+
 body[data-mode="read"] .illo-fox {
   right: 28px;
   transform: scaleX(-1);
-}
-
-/* 模式切換鈕：文字由 data-mode 決定 */
-body[data-mode="read"] #btn-mode .mode-name::before {
-  content: "編輯";
-}
-
-body[data-mode="edit"] #btn-mode .mode-name::before {
-  content: "閱讀";
 }
 
 /* ===== 全螢幕閱讀 ===== */
