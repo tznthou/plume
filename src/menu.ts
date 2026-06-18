@@ -5,13 +5,15 @@ import { CheckMenuItem } from "@tauri-apps/api/menu/checkMenuItem";
 import type { ThemeChoice } from "./theme";
 import type { FontFamily } from "./reading-prefs";
 
+export type Mode = "read" | "write" | "split";
+
 export interface MenuCallbacks {
   onNew: () => void;
   onOpen: () => void;
   onSave: () => void;
   onSaveAs: () => void;
   onExport: () => void;
-  onToggleMode: () => void;
+  onSetMode: (mode: Mode) => void;
   onToggleFocus: (checked: boolean) => void;
   onToggleTypewriter: (checked: boolean) => void;
   onToggleToc: () => void;
@@ -46,6 +48,12 @@ function setRadioActive(group: RadioEntry[], activeIdx: number): void {
 
 let focusState = false;
 let typewriterState = false;
+let focusMenuItem: CheckMenuItem | undefined;
+let typewriterMenuItem: CheckMenuItem | undefined;
+
+const MODE_ORDER: Mode[] = ["write", "split", "read"];
+const MODE_LABELS = ["撰 Compose", "參 Split", "閱 Read"];
+const modeRadio: RadioEntry[] = [];
 
 const THEME_ORDER: ThemeChoice[] = ["vol-de-nuit", "inkstone", "auto"];
 const THEME_LABELS = ["Night Flight", "Inkstone", "Auto"];
@@ -97,25 +105,40 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
     ],
   });
 
-  const focusMenuItem = await CheckMenuItem.new({
+  focusMenuItem = await CheckMenuItem.new({
     text: "Focus Mode",
     accelerator: "CmdOrCtrl+Shift+F",
     checked: false,
+    enabled: document.body.dataset.mode === "write", // 只歸「撰」（決策 42）
     action: () => {
       focusState = !focusState;
       cb.onToggleFocus(focusState);
     },
   });
 
-  const typewriterMenuItem = await CheckMenuItem.new({
+  typewriterMenuItem = await CheckMenuItem.new({
     text: "Typewriter Mode",
     accelerator: "CmdOrCtrl+T",
     checked: false,
+    enabled: document.body.dataset.mode === "write", // 只歸「撰」（決策 42）
     action: () => {
       typewriterState = !typewriterState;
       cb.onToggleTypewriter(typewriterState);
     },
   });
+
+  // Mode radio（撰／參／閱）；Cmd+E 直接進「撰」沉浸寫作
+  for (let i = 0; i < MODE_ORDER.length; i++) {
+    const idx = i;
+    const item = await MenuItem.new({
+      text: radioText(MODE_LABELS[i], document.body.dataset.mode === MODE_ORDER[i]),
+      accelerator: MODE_ORDER[i] === "write" ? "CmdOrCtrl+E" : undefined,
+      action: () => {
+        cb.onSetMode(MODE_ORDER[idx]); // setMode → updateModeMenu 已同步 radio，無需再 setRadioActive
+      },
+    });
+    modeRadio.push({ item, label: MODE_LABELS[i] });
+  }
 
   // Theme radio submenu
   for (let i = 0; i < THEME_ORDER.length; i++) {
@@ -165,10 +188,10 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   const viewSubmenu = await Submenu.new({
     text: "View",
     items: [
-      { text: "Edit / Read Mode", accelerator: "CmdOrCtrl+E", action: () => cb.onToggleMode() },
+      ...modeRadio.map((r) => r.item),
       { item: "Separator" },
-      focusMenuItem,
-      typewriterMenuItem,
+      focusMenuItem!,
+      typewriterMenuItem!,
       { item: "Separator" },
       themeSubmenu,
       fontSubmenu,
@@ -193,6 +216,25 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
     items: [appSubmenu, fileSubmenu, editSubmenu, viewSubmenu, helpSubmenu],
   });
   await menu.setAsAppMenu();
+}
+
+export function updateModeMenu(mode: Mode): void {
+  const idx = MODE_ORDER.indexOf(mode);
+  if (idx >= 0) setRadioActive(modeRadio, idx);
+}
+
+// Focus/Typewriter 只歸「撰」：離開沉浸態時 main.ts 呼叫此處同步取消選單勾選（決策 42）
+export function resetWritingToolsMenu(): void {
+  focusState = false;
+  typewriterState = false;
+  void focusMenuItem?.setChecked(false);
+  void typewriterMenuItem?.setChecked(false);
+}
+
+// Focus/Typewriter 只歸「撰」：非撰態停用選單項，從根本擋掉 split/read 開啟（決策 42）
+export function setWritingToolsEnabled(enabled: boolean): void {
+  void focusMenuItem?.setEnabled(enabled);
+  void typewriterMenuItem?.setEnabled(enabled);
 }
 
 export function updateThemeMenu(choice: ThemeChoice): void {

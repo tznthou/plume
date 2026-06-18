@@ -6,6 +6,22 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-06-19
+
+### Added
+
+- Three writing modes (Compose / Split / Read): the toolbar is now a three-way segmented switch, replacing the old read/edit toggle. **Compose** hides the preview and centers the editor for distraction-free writing; **Split** keeps the side-by-side editor and preview; **Read** hides the editor and centers the preview. New files open in Compose, existing files in Read, and Cmd/Ctrl+E jumps straight to Compose
+- The View menu mirrors the three modes, marking the current one with ●
+
+### Changed
+
+- Positioning grows from "read-first, write-second" into reading and writing as equals: writing is no longer a sidecar to reading but its own immersive state (Compose), shaped by the same subtraction that defines the reading view
+- Focus mode and Typewriter mode now belong to Compose only — disabled elsewhere and switched off automatically when you leave. In a split pane the preview drowns them out; they only earn their keep in immersive writing
+
+### Fixed
+
+- macOS app signing: added an ad-hoc signing config, fixing the "damaged app" Gatekeeper block that previously forced a manual `xattr` workaround after installing the dmg (0.7.0 dmgs remain affected; fixed from 0.8.0 — ad-hoc signing, not Apple notarization)
+
 ## [0.7.0] - 2026-06-18
 
 ### Added

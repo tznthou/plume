@@ -27,9 +27,11 @@
       </button>
       <button id="btn-toc" type="button" class="read-only">目錄</button>
       <button id="btn-fullscreen" type="button" class="read-only">全螢幕</button>
-      <button id="btn-mode" type="button" aria-label="切換閱讀/編輯模式">
-        <span class="mode-name" aria-hidden="true"></span>
-      </button>
+      <div id="mode-switch" role="group" aria-label="寫作模式">
+        <button type="button" data-mode-target="write" aria-label="撰：沉浸寫作">撰</button>
+        <button type="button" data-mode-target="split" aria-label="參：邊寫邊對照">參</button>
+        <button type="button" data-mode-target="read" aria-label="閱：閱讀">閱</button>
+      </div>
       <select id="recent-list" aria-label="最近檔案">
         <option value="" selected disabled>最近檔案</option>
       </select>

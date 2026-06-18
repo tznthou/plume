@@ -27,7 +27,7 @@ import { currentChoice, initTheme, onThemeChange, setTheme, toggleTheme } from "
 import { currentFont, decreaseSize, increaseSize, initReadingPrefs, resetSize, setFont } from "./reading-prefs";
 import { initStatusbar, setDirty, updateStats } from "./statusbar";
 import { initToc, updateToc } from "./toc";
-import { initMenu, updateThemeMenu } from "./menu";
+import { initMenu, resetWritingToolsMenu, setWritingToolsEnabled, updateModeMenu, updateThemeMenu, type Mode } from "./menu";
 import { toggleShortcuts, hideShortcuts } from "./shortcuts";
 
 const editorEl = document.querySelector<HTMLElement>("#editor")!;
@@ -40,20 +40,38 @@ initStatusbar();
 onDirtyChange(setDirty); // dirty 指示：03 指針垂落 / 05 硃砂印
 onLoad((kind) => {
   scrollToTopOnNextUpdate();
-  setMode(kind === "new" ? "edit" : "read");
+  setMode(kind === "new" ? "write" : "read"); // 新檔進「撰」沉浸寫、開檔進「閱」先讀
 });
 
-function setMode(mode: "read" | "edit"): void {
+const modeSwitch = document.querySelector<HTMLElement>("#mode-switch")!;
+const modeButtons = modeSwitch.querySelectorAll<HTMLButtonElement>("button"); // 靜態三鈕，查一次重用
+updateModeSwitch((document.body.dataset.mode as Mode) || "read"); // 啟動即同步 segmented，避免初始/openExternal 失敗路徑懸空
+
+function setMode(mode: Mode): void {
   document.body.dataset.mode = mode;
-  if (mode === "edit") {
+  if (mode !== "read") {
+    // 撰／參都需編輯器：退出全螢幕與目錄、重新量測
     delete document.body.dataset.toc;
     delete document.body.dataset.fullscreen;
     remeasure();
   }
+  if (mode === "write") {
+    setWritingToolsEnabled(true); // 撰態才開放 Focus/Typewriter
+  } else {
+    // Focus/Typewriter 只歸「撰」：離開沉浸態即關閉並停用選單（決策 42，split 裡開會被預覽稀釋）
+    reconfigureFocus([]);
+    reconfigureTypewriter([]);
+    resetWritingToolsMenu();
+    setWritingToolsEnabled(false);
+  }
+  updateModeSwitch(mode);
+  updateModeMenu(mode);
 }
 
-function toggleMode(): void {
-  setMode(document.body.dataset.mode === "read" ? "edit" : "read");
+function updateModeSwitch(mode: Mode): void {
+  for (const btn of modeButtons) {
+    btn.setAttribute("aria-pressed", String(btn.dataset.modeTarget === mode));
+  }
 }
 
 function toggleToc(): void {
@@ -67,7 +85,7 @@ void Promise.all([initTheme(), initReadingPrefs()]).then(() => {
     onSave: doSave,
     onSaveAs: doSaveAs,
     onExport: () => void exportHtml(),
-    onToggleMode: toggleMode,
+    onSetMode: setMode,
     onToggleFocus: (checked) => {
       reconfigureFocus(checked ? focusExtension() : []);
     },
@@ -162,9 +180,9 @@ document.querySelector("#btn-fullscreen")!.addEventListener("click", () => {
 document.querySelector("#btn-exit-fullscreen")!.addEventListener("click", () => {
   delete document.body.dataset.fullscreen;
 });
-document.querySelector("#btn-mode")!.addEventListener("click", () => {
-  toggleMode();
-});
+for (const btn of modeButtons) {
+  btn.addEventListener("click", () => setMode(btn.dataset.modeTarget as Mode));
+}
 
 // ----- Escape（選單 accelerator 不處理的按鍵） -----
 
@@ -211,7 +229,7 @@ void invoke<string[]>("get_opened_urls").then((urls) => {
     const md = urls.find((p) => MD_EXT.test(p));
     if (md) openExternalWithRefresh(md);
   } else {
-    setMode("edit");
+    setMode("write"); // cold-start 無檔：直接進「撰」沉浸寫
   }
 });
 
