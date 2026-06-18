@@ -7,7 +7,7 @@
 
 [中文](README.md)
 
-A lightweight Markdown reader — files open straight into full-width rendered view; editing is one click away when you need it. Tauri 2 desktop app that gets you from `.md` to reading without the detour.
+A desktop Markdown tool that opens straight into reading and gets out of the way when you write. Other people's `.md` files render into a full-width reading view; your own get a focus mode, typewriter scrolling, KaTeX math, and mermaid diagrams. A native Tauri 2 app — light, no account, no plugin ecosystem.
 
 <p align="center">
   <img src="docs/images/screenshot-dark.webp" alt="Plume Vol de Nuit theme screenshot" width="720" />
@@ -15,41 +15,71 @@ A lightweight Markdown reader — files open straight into full-width rendered v
 
 ## Features
 
+Plume treats *reading* and *writing* as two modes: files open into full-width reading by default, and you switch to editing only when you mean to. Both sides are done properly.
+
+### Reading
+
 | Feature | What it does |
 |---------|--------------|
 | **Read mode by default** | Files open in full-width reading view (preview centered at 800px). Click "編輯" or Cmd/Ctrl+E to switch to split-pane editing; new files go straight to edit mode |
-| **Table of Contents** | In read mode, click "目錄" to open a sidebar TOC listing h1–h6 headings with hierarchical indentation. Click any heading to scroll to it; updates automatically on each edit |
-| **Fullscreen reading** | Hides the toolbar and status bar, leaving just content and scrolling. Exit with the ✕ button at top-right or Escape; TOC remains usable |
+| **Table of contents** | In read mode, click "目錄" to open a sidebar TOC listing h1–h6 headings with hierarchical indentation. Click any heading to scroll to it; updates automatically on each edit |
+| **Fullscreen reading** | Hides the toolbar and status bar, leaving just content and scrolling. Exit with the ✕ button at top-right or Escape; the TOC stays usable |
 | **Drag & drop / folders** | Drop a `.md` to open it; drop a folder to auto-discover and open its README.md — toss a project folder onto Plume and see its README instantly |
 | **File association** | Right-click a `.md` in Finder → Open With → Plume, or make Plume the default. Double-clicking another `.md` while Plume is running loads it in the same window |
-| **Live preview** | In edit mode, updates within 50ms of typing; GFM tables, task lists, strikethrough, autolinks |
-| **Editor** | CodeMirror 6: line numbers, Markdown syntax highlighting, search & replace, undo/redo; CJK input methods tested — composition never breaks mid-character |
-| **Mermaid diagrams** | ` ```mermaid ` blocks render live as SVG — flowchart, sequence, class, ER, Gantt and more, with automatic theme-matched colors |
-| **Code highlighting** | highlight.js with a curated language subset — no payload tax for languages you never use |
-| **Safe rendering** | Every render passes through DOMPurify — opening someone else's `.md` with a stray `<script>` is a non-event |
-| **HTML export** | Produces a single self-styled `.html` that renders exactly like the preview |
 | **Recent files** | Last 10 files survive restarts, file-access permissions included |
-| **Shortcuts** | Cmd/Ctrl + N new, O open, S save, Shift+S save-as, E toggle read/edit; closing with unsaved changes prompts first |
+
+### Writing
+
+| Feature | What it does |
+|---------|--------------|
+| **CodeMirror 6 editor** | Line numbers, Markdown syntax highlighting, search & replace, undo/redo; CJK input methods tested — composition never breaks mid-character |
+| **Live preview** | In edit mode, the preview updates within 50ms of typing |
+| **Focus mode** `⌘⇧F` | Only the paragraph under the cursor stays fully visible; the rest fades out. Paragraph boundaries follow blank lines and track the cursor as it moves |
+| **Typewriter mode** `⌘T` | The cursor line stays pinned to the vertical center of the screen while text scrolls up; even the top of the document can be centered |
+| **Copy as HTML** `⌘⇧C` | Renders the Markdown to HTML on the clipboard, ready to paste into a CMS or blog's HTML editor; math is converted to MathML automatically |
+| **HTML export** | Produces a single self-styled `.html` that renders exactly like the preview |
+
+### Rendering
+
+| Feature | What it does |
+|---------|--------------|
+| **GFM** | Tables, task lists, strikethrough, autolinks — out of the box |
+| **Code highlighting** | highlight.js with a curated 16-language subset (JS/TS/Python/Rust/Go/Java/C/C++/Bash/JSON/YAML/SQL/HTML/CSS/Markdown/diff), no auto-detection, no payload tax for languages you never use |
+| **Mermaid diagrams** | ` ```mermaid ` blocks render live as SVG — flowchart, sequence, class, ER, Gantt and more, with theme-matched colors (lazy-loaded; files without diagrams pay nothing) |
+| **KaTeX math** | Inline `$...$` and display `$$...$$` math, lazy-loaded — files without math never load KaTeX |
+| **Footnotes** | `[^1]` footnote syntax, with a footnote section auto-generated at the bottom of the preview and click-to-jump references |
+| **Front matter hiding** | YAML front matter (fenced by `---`) never shows up in the preview |
+| **Safe rendering** | Every render passes through DOMPurify — opening someone else's `.md` with a stray `<script>` is a non-event |
+
+### Personalization
+
+| Feature | What it does |
+|---------|--------------|
+| **Three-state theme** | Vol de Nuit (dark, default), Inkstone (light), and Auto (follows the system light/dark setting); your choice is remembered across restarts |
+| **Reading font** | Default / Serif / Sans / Mono, with `⌘=` / `⌘-` / `⌘0` to adjust the size live (12–24px) |
+| **Native menu bar** | Plume / File / Edit / View / Help system-native menus |
+| **Shortcut cheat sheet** | `⌘/` brings up an overlay; key labels adapt to the platform (macOS `⌘` / Windows `Ctrl`) |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
     subgraph Frontend["WebView frontend (Vanilla TS + Vite)"]
-        Editor["editor.ts<br/>CodeMirror 6"]
-        Renderer["renderer.ts<br/>markdown-it + hljs<br/>+ DOMPurify"]
-        Preview["preview.ts<br/>preview updates + synced scroll"]
-        TOC["toc.ts<br/>table of contents (h1-h6)"]
-        File["file.ts<br/>open / save / export<br/>document state"]
+        subgraph Pipeline["render pipeline (synchronous, zero IPC)"]
+            Editor["editor.ts<br/>CodeMirror 6"]
+            Renderer["renderer.ts<br/>markdown-it + hljs<br/>+ DOMPurify"]
+            Preview["preview.ts<br/>preview updates / synced scroll<br/>mermaid / KaTeX lazy load"]
+        end
+        UX["experience layer<br/>theme (three-state)<br/>reading-prefs (font/size)<br/>focus-mode / typewriter<br/>menu / shortcuts / toc"]
+        File["file.ts<br/>open / save / export<br/>document state (path / dirty)"]
         Recent["recent.ts<br/>recent files"]
     end
     subgraph Rust["Rust core (src-tauri)"]
         Plugins["official plugins<br/>dialog / fs / store<br/>persisted-scope / opener"]
         Commands["custom commands<br/>grant_scope / get_opened_urls"]
     end
-    Editor -- "onChange (debounce 50ms)" --> Renderer
-    Renderer --> Preview
-    Renderer --> TOC
+    Editor -- "onChange (debounce 50ms)" --> Renderer --> Preview
+    UX -. "acts on editor / preview / document" .-> Pipeline
     File -- IPC --> Plugins
     Recent -- IPC --> Plugins
     Preview -- "external links via IPC" --> Plugins
@@ -57,22 +87,26 @@ flowchart LR
     Commands -- "fs scope grant" --> Plugins
 ```
 
-**Design principle:** read first, edit on demand — files open into full-width reading view; editing is a deliberate switch, not the default. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions). Rust handles file I/O, dialogs, OS integration, and two custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation; also handles folder drops by discovering README.md) and `get_opened_urls` (cold-start file paths from the OS).
+**Design principle:** read first, write second — files open into full-width reading, and editing is a deliberate switch. But once you're in the editor, focus mode, typewriter scrolling, and live preview are all there. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, menu, TOC) that changes presentation without touching the data flow. Rust handles file I/O, dialogs, OS integration, and two custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation; also handles folder drops by discovering README.md) and `get_opened_urls` (cold-start file paths from the OS).
 
 ## Tech stack
 
 | Tech | Version | Role |
 |------|---------|------|
 | Tauri | 2.x | Desktop shell (Rust core + system WebView) |
-| TypeScript + Vite | TS 5.x / Vite (via create-tauri-app) | Frontend language and build tooling, zero UI framework |
+| TypeScript + Vite | TS 5.x / Vite 6 | Frontend language and build tooling, zero UI framework |
 | CodeMirror | 6 (`codemirror` meta package + `@codemirror/lang-markdown`) | Editor: line numbers, Markdown highlighting, search & replace, IME support |
 | markdown-it | 14.x | Markdown → HTML (GFM: tables and strikethrough built in, linkify on) |
 | markdown-it-task-lists | 2.x | GFM task-list checkboxes |
-| highlight.js | 11.x | Code block highlighting (curated language subset only) |
+| markdown-it-footnote | 4.x | `[^1]` footnote syntax |
+| highlight.js | 11.x | Code block highlighting (curated 16-language subset only) |
+| KaTeX | 0.17.x | Math rendering (lazy-loaded, `trust: false` + `maxSize: 20`) |
 | mermaid | 11.x | Diagram rendering (lazy-loaded, `securityLevel: "strict"`) |
 | DOMPurify | 3.x | XSS sanitization of rendered output (non-negotiable, see SPEC) |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
-| Vitest | 3.x | Unit tests (rendering pipeline focus) |
+| Vitest | 4.x | Unit tests (51 of them, rendering-pipeline focus) |
+
+> Front matter hiding uses a regex strip ahead of `render()` rather than `markdown-it-front-matter` — that package has an edge case where a document starting with `---` but never closing it gets swallowed whole.
 
 ## Installation
 
@@ -106,19 +140,28 @@ npm run tauri build   # bundles .app into src-tauri/target/release/bundle/
 npm run test          # Vitest unit tests
 ```
 
+> The release profile enables LTO + strip + codegen-units 1 + panic abort, bringing the packaged binary down to ~4.9 MB.
+
 ## Project layout
 
 ```
 markdown-tool/
 ├── index.html              # layout skeleton: toolbar + read/edit dual mode
 ├── src/                    # frontend (Vanilla TS)
-│   ├── main.ts             # entry point: module wiring, mode switching, shortcuts
+│   ├── main.ts             # entry point: module wiring, mode switching
 │   ├── editor.ts           # CodeMirror 6 wrapper
-│   ├── renderer.ts         # markdown-it + hljs + DOMPurify pipeline
-│   ├── preview.ts          # preview updates, synced scroll, external link handling
+│   ├── renderer.ts         # markdown-it + hljs + DOMPurify pipeline (incl. KaTeX parse rules)
+│   ├── preview.ts          # preview updates, synced scroll, external links, mermaid/KaTeX lazy render
 │   ├── toc.ts              # table of contents: heading extraction + click-to-scroll
 │   ├── file.ts             # open/save/save-as/HTML export, document state (path, dirty)
 │   ├── recent.ts           # recent files (plugin-store)
+│   ├── theme.ts            # three-state theme (Vol de Nuit/Inkstone/Auto), matchMedia listener
+│   ├── reading-prefs.ts    # reading font & size preferences (plugin-store persisted)
+│   ├── focus-mode.ts       # focus mode: spotlight the cursor's paragraph, fade the rest
+│   ├── typewriter.ts       # typewriter mode: pin the cursor line to screen center
+│   ├── menu.ts             # native menu bar (@tauri-apps/api/menu, built in JS)
+│   ├── shortcuts.ts        # keyboard shortcut overlay (cheat sheet)
+│   ├── statusbar.ts        # status bar: word/line count, render time, unsaved indicator
 │   └── style.css           # layout + dual themes + read/edit modes + preview typography
 ├── src-tauri/              # Rust core
 │   ├── src/lib.rs          # Tauri bootstrap + plugins + custom commands
@@ -130,10 +173,13 @@ markdown-tool/
 │   ├── PRD.md              # requirements and user stories
 │   ├── SPEC.md             # architecture, module boundaries, IPC, security
 │   └── PLAN.md             # roadmap and smoke checklist
+├── CHANGELOG.md            # version history (Chinese; CHANGELOG_EN.md alongside)
 ├── LICENSE                 # Apache 2.0
 ├── README.md               # Chinese README
 └── README_EN.md            # this file
 ```
+
+See the [CHANGELOG](CHANGELOG_EN.md) for the version history.
 
 ---
 
@@ -145,11 +191,17 @@ I read and write far more Markdown than I ever signed up for. That's an AI-era t
 
 The catch is that Markdown never shows you its rendered self. Tables, task lists, and code blocks only take shape once rendered — unlike a Word document, which opens already laid out. So every time I wanted to read a single `.md`, the routine was: spin up an Obsidian vault, hand it to a browser extension, or push to GitHub just to see how it looks. A long detour for "let me read this."
 
-So I made my own: opens instantly, previews as you type, saves and steps aside. No vault, no account, no plugin ecosystem. Even the name was deliberate — plume, the French word for a feather, and for the quill you write with. Light — for reading, and for writing with care.
+So I made my own: opens straight to reading, one keystroke into editing, no vault, no account, no plugin ecosystem. Even the name was deliberate — plume, the French word for a feather, and for the quill you write with. Light — for reading, and for writing with care.
+
+### Why a reader should also be good to write in
+
+It started as just a reader. But since opening a file already meant I could edit it, editing couldn't be an afterthought. Writing long pieces, a screen full of paragraphs pulls your attention everywhere — so there's a focus mode, where only the paragraph under the cursor stays lit and the rest dims. Typing downward, your eyes have to chase the cursor toward the bottom of the screen — so there's a typewriter mode, where the cursor line is pinned to the center and text scrolls up past it. And when a piece is done and needs to go somewhere else, there's copy-as-HTML, math converted to MathML and all.
+
+These are lessons from immersive writing tools like Byword. Plume tries to put "instantly readable" and "good to write in" in the same window — for reading other people's, and writing your own.
 
 ---
 
-## Merch Concepts
+## Merch concepts
 
 The fox from the Vol de Nuit theme escaped the app and landed on a phone case, a mousepad, and a sticker sheet.
 

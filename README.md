@@ -7,13 +7,17 @@
 
 [English](README_EN.md)
 
-輕量 Markdown 閱讀器——開檔就是渲染好的全幅閱讀，需要改才切編輯。Tauri 2 桌面應用，讀 `.md` 不必繞路。
+開檔即閱讀、落筆即沉浸的桌面 Markdown 工具。讀別人的 `.md` 是渲染好的全幅閱讀，寫自己的有專注模式、打字機捲動、KaTeX 數學與 mermaid 圖表。Tauri 2 原生應用——輕量、無帳號、無外掛生態。
 
 <p align="center">
   <img src="docs/images/screenshot-dark.webp" alt="Plume 夜航主題截圖" width="720" />
 </p>
 
 ## 功能特色
+
+Plume 把「讀」和「寫」當成兩種模式：開檔預設進全幅閱讀，要動筆才切編輯。兩邊都做到位。
+
+### 閱讀
 
 | 功能 | 說明 |
 |------|------|
@@ -22,34 +26,60 @@
 | **全螢幕閱讀** | 隱藏工具列與狀態列，只留內容與捲動；右上角 ✕ 或 Escape 退出，TOC 仍可使用 |
 | **拖曳開檔 / 資料夾** | 拖 `.md` 進視窗直接開啟；拖資料夾自動找 README.md 開啟——開發者丟專案即見 README |
 | **檔案關聯** | macOS Finder 右鍵 → 以 Plume 打開，或設為 `.md` 的預設應用程式；app 已開著時再雙擊另一個 `.md` 會在同一視窗載入 |
-| **即時預覽** | 編輯模式下輸入後 50ms 內更新；GFM 表格、任務清單、刪除線、autolink |
-| **編輯器** | CodeMirror 6：行號、Markdown 語法高亮、搜尋取代、undo/redo；注音輸入法組字實測不斷字 |
-| **Mermaid 圖表** | ` ```mermaid ` 區塊即時渲染為 SVG——flowchart、sequence、class、ER、Gantt 等，跟隨佈景主題自動配色 |
-| **程式碼高亮** | highlight.js 只註冊常用語言子集，不為冷門語言付出載入成本 |
-| **安全渲染** | 所有輸出過 DOMPurify 消毒——開別人給的含 `<script>` 的 `.md` 也不怕 |
-| **匯出 HTML** | 產出單一自帶樣式的 `.html`，瀏覽器開啟與預覽所見一致 |
 | **最近檔案** | 最近 10 筆跨重啟有效，檔案存取權限一併記住 |
-| **快捷鍵** | Cmd/Ctrl + N 新檔、O 開檔、S 存檔、Shift+S 另存、E 切換閱讀/編輯；未儲存變更關閉視窗會攔下確認 |
+
+### 寫作
+
+| 功能 | 說明 |
+|------|------|
+| **CodeMirror 6 編輯器** | 行號、Markdown 語法高亮、搜尋取代、undo/redo；注音輸入法組字實測不斷字 |
+| **即時預覽** | 編輯模式下輸入後 50ms 內更新，所見即所得 |
+| **專注模式** `⌘⇧F` | 只有游標所在的段落完全可見，其餘淡出——段落邊界由空行決定，移動游標時即時跟隨 |
+| **打字機模式** `⌘T` | 游標行永遠固定在畫面垂直中央，打字時文字向上捲動；文件頂部也能置中 |
+| **複製為 HTML** `⌘⇧C` | 把 Markdown 渲染成 HTML 複製到剪貼簿，直接貼進 CMS 或部落格的 HTML 編輯器；含數學公式時自動轉為 MathML |
+| **匯出 HTML** | 產出單一自帶樣式的 `.html`，瀏覽器開啟與預覽所見一致 |
+
+### 渲染
+
+| 功能 | 說明 |
+|------|------|
+| **GFM** | 表格、任務清單、刪除線、autolink，開箱即用 |
+| **程式碼高亮** | highlight.js 只註冊 16 種常用語言（JS/TS/Python/Rust/Go/Java/C/C++/Bash/JSON/YAML/SQL/HTML/CSS/Markdown/diff），不開自動偵測，不為冷門語言付出載入成本 |
+| **Mermaid 圖表** | ` ```mermaid ` 區塊即時渲染為 SVG——flowchart、sequence、class、ER、Gantt 等，跟隨佈景主題自動配色（懶載入，無圖表的檔案不付出成本） |
+| **KaTeX 數學公式** | 行內 `$...$` 與獨立 `$$...$$` 數學式渲染，懶載入——沒有數學的檔案不會載入 KaTeX |
+| **腳註** | `[^1]` 語法腳註，預覽底部自動產生腳註區塊，點擊引用可跳轉 |
+| **Front matter 隱藏** | YAML front matter（`---` 包圍）不會出現在預覽中 |
+| **安全渲染** | 所有輸出過 DOMPurify 消毒——開別人給的含 `<script>` 的 `.md` 也不怕 |
+
+### 個人化
+
+| 功能 | 說明 |
+|------|------|
+| **三態佈景主題** | 夜航（深色，預設）、硯墨（淺色）、Auto（跟隨系統明暗自動切換）；選擇記住，重開不用重選 |
+| **閱讀字型** | 預設 / Serif / Sans / Mono 四選一，`⌘=` / `⌘-` / `⌘0` 即時調整字級（12–24px） |
+| **原生選單列** | Plume / File / Edit / View / Help 系統原生選單 |
+| **快捷鍵提示** | `⌘/` 叫出 cheat sheet 浮層，按鍵標示隨平台自適應（macOS `⌘` / Windows `Ctrl`） |
 
 ## 系統架構
 
 ```mermaid
 flowchart LR
     subgraph Frontend["WebView 前端（Vanilla TS + Vite）"]
-        Editor["editor.ts<br/>CodeMirror 6"]
-        Renderer["renderer.ts<br/>markdown-it + hljs<br/>+ DOMPurify"]
-        Preview["preview.ts<br/>預覽更新 + 同步捲動"]
-        TOC["toc.ts<br/>目錄導覽（h1-h6）"]
-        File["file.ts<br/>開檔 / 存檔 / 匯出<br/>文件狀態"]
+        subgraph Pipeline["渲染管線（同步・零 IPC）"]
+            Editor["editor.ts<br/>CodeMirror 6"]
+            Renderer["renderer.ts<br/>markdown-it + hljs<br/>+ DOMPurify"]
+            Preview["preview.ts<br/>預覽更新 / 同步捲動<br/>mermaid / KaTeX 懶載入"]
+        end
+        UX["體驗層<br/>theme（三態主題）<br/>reading-prefs（字型/字級）<br/>focus-mode / typewriter<br/>menu / shortcuts / toc"]
+        File["file.ts<br/>開檔 / 存檔 / 匯出<br/>文件狀態（path / dirty）"]
         Recent["recent.ts<br/>最近檔案"]
     end
     subgraph Rust["Rust 核心（src-tauri）"]
         Plugins["官方 Plugins<br/>dialog / fs / store<br/>persisted-scope / opener"]
         Commands["自訂 Commands<br/>grant_scope / get_opened_urls"]
     end
-    Editor -- "onChange (debounce 50ms)" --> Renderer
-    Renderer --> Preview
-    Renderer --> TOC
+    Editor -- "onChange (debounce 50ms)" --> Renderer --> Preview
+    UX -. "作用於編輯 / 預覽 / 文件" .-> Pipeline
     File -- IPC --> Plugins
     Recent -- IPC --> Plugins
     Preview -- "外部連結 IPC" --> Plugins
@@ -57,22 +87,26 @@ flowchart LR
     Commands -- "fs scope 授權" --> Plugins
 ```
 
-**設計原則**：讀為主、改為輔——開檔先進全幅閱讀，編輯是按需切換的第二動作。Markdown 渲染管線完整留在前端（同步、零 IPC、零 race condition）；Rust 端負責檔案 I/O、對話框、系統整合，以及兩個自訂 command——`grant_scope`（拖曳與檔案關聯的外部路徑授權，含 symlink 解析與副檔名驗證，也處理資料夾拖曳的 README 查找）和 `get_opened_urls`（OS 傳入的冷啟動檔案路徑）。
+**設計原則**：讀為主、寫為輔——開檔先進全幅閱讀，編輯是按需切換的第二動作；但切進編輯後，專注模式、打字機捲動、即時預覽一個不少。Markdown 渲染管線完整留在前端（同步、零 IPC、零 race condition），mermaid 與 KaTeX 是懶載入的後處理；圍繞這條主幹的是體驗層（主題、字型、專注/打字機、選單、目錄），不改變資料流，只調整呈現。Rust 端負責檔案 I/O、對話框、系統整合，以及兩個自訂 command——`grant_scope`（拖曳與檔案關聯的外部路徑授權，含 symlink 解析與副檔名驗證，也處理資料夾拖曳的 README 查找）和 `get_opened_urls`（OS 傳入的冷啟動檔案路徑）。
 
 ## 技術棧
 
 | 技術 | 版本 | 用途 |
 |------|------|------|
 | Tauri | 2.x | 桌面應用框架（Rust shell + 系統 WebView） |
-| TypeScript + Vite | TS 5.x / Vite（隨 create-tauri-app） | 前端語言與建置工具，零 UI 框架 |
+| TypeScript + Vite | TS 5.x / Vite 6 | 前端語言與建置工具，零 UI 框架 |
 | CodeMirror | 6（`codemirror` meta 套件 + `@codemirror/lang-markdown`） | 編輯器：行號、Markdown 語法高亮、搜尋取代、IME 支援 |
 | markdown-it | 14.x | Markdown → HTML（GFM：表格/刪除線內建，linkify 開啟） |
 | markdown-it-task-lists | 2.x | GFM 任務清單 checkbox |
-| highlight.js | 11.x | 程式碼區塊語法上色（僅註冊常用語言子集） |
+| markdown-it-footnote | 4.x | `[^1]` 腳註語法 |
+| highlight.js | 11.x | 程式碼區塊語法上色（僅註冊 16 語言子集） |
+| KaTeX | 0.17.x | 數學公式渲染（懶載入，`trust: false` + `maxSize: 20`） |
 | mermaid | 11.x | 圖表渲染（懶載入，`securityLevel: "strict"`） |
 | DOMPurify | 3.x | 渲染輸出 XSS 消毒（必備，見 SPEC 安全章節） |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
-| Vitest | 3.x | 單元測試（渲染管線為主） |
+| Vitest | 4.x | 單元測試（51 個，渲染管線為主） |
+
+> Front matter 隱藏改用 `render()` 前置 regex 剝除，不走 `markdown-it-front-matter`——該套件對「以 `---` 開頭但無閉合」的文件有整段吃掉的 edge case。
 
 ## 安裝
 
@@ -106,19 +140,28 @@ npm run tauri build   # 產出 .app 於 src-tauri/target/release/bundle/
 npm run test          # Vitest 單元測試
 ```
 
+> Release profile 已開 LTO + strip + codegen-units 1 + panic abort，打包後的 binary 約 4.9 MB。
+
 ## 專案結構
 
 ```
 markdown-tool/
 ├── index.html              # 版面骨架：工具列 + 閱讀/編輯雙模式
 ├── src/                    # 前端（Vanilla TS）
-│   ├── main.ts             # 進入點：模組組裝、模式切換、快捷鍵
+│   ├── main.ts             # 進入點：模組組裝、模式切換
 │   ├── editor.ts           # CodeMirror 6 封裝
-│   ├── renderer.ts         # markdown-it + hljs + DOMPurify 渲染管線
-│   ├── preview.ts          # 預覽區更新、同步捲動、外部連結攔截
+│   ├── renderer.ts         # markdown-it + hljs + DOMPurify 渲染管線（含 KaTeX 解析規則）
+│   ├── preview.ts          # 預覽更新、同步捲動、外部連結攔截、mermaid/KaTeX 懶載入渲染
 │   ├── toc.ts              # 目錄導覽：heading 擷取 + 點擊跳轉
 │   ├── file.ts             # 開檔/存檔/另存/匯出 HTML、文件狀態（路徑、dirty）
 │   ├── recent.ts           # 最近開啟檔案（plugin-store）
+│   ├── theme.ts            # 三態佈景主題（夜航/硯墨/Auto），matchMedia 監聽系統明暗
+│   ├── reading-prefs.ts    # 閱讀字型與字級偏好（plugin-store 持久化）
+│   ├── focus-mode.ts       # 專注模式：游標段落聚焦、其餘淡出
+│   ├── typewriter.ts       # 打字機模式：游標行固定畫面中央
+│   ├── menu.ts             # 原生選單列（@tauri-apps/api/menu，JS 端建構）
+│   ├── shortcuts.ts        # 快捷鍵提示浮層（cheat sheet）
+│   ├── statusbar.ts        # 狀態列：字數/行數/渲染時間/未儲存指示
 │   └── style.css           # 版面 + 雙主題 + 閱讀/編輯模式 + 預覽 typography
 ├── src-tauri/              # Rust 核心
 │   ├── src/lib.rs          # Tauri 啟動 + plugin 註冊 + 自訂 commands
@@ -130,10 +173,13 @@ markdown-tool/
 │   ├── PRD.md              # 需求與使用者故事
 │   ├── SPEC.md             # 架構、模組職責、IPC 邊界、安全
 │   └── PLAN.md             # 實作路線圖與冒煙清單
+├── CHANGELOG.md            # 版本紀錄（中文，另有 CHANGELOG_EN.md）
 ├── LICENSE                 # Apache 2.0
 ├── README.md               # 中文說明（本檔）
 └── README_EN.md            # English README
 ```
+
+版本演進見 [CHANGELOG](CHANGELOG.md)。
 
 ---
 
@@ -145,7 +191,13 @@ markdown-tool/
 
 問題是 Markdown 原始碼能讀，渲染後長什麼樣卻看不出來。表格、任務清單、程式碼區塊都得渲染才見真章，不像 Word 開了就是排好的版面。於是每次想看一個 `.md`，要不開 Obsidian vault，要不丟瀏覽器外掛，要不 push 上 GitHub。就「讀一份文件」這件事來說，繞得太遠了。
 
-所以我做了一個自己的版本：開了就能寫，存了就能走，沒有 vault、沒有帳號、沒有外掛生態。名字也想過——Plume，法文裡的羽毛，也是落筆的羽毛筆。輕，而且我會拿來閱讀，並且用心寫字。
+所以我做了一個自己的版本：開了就能讀，要改一鍵切編輯，沒有 vault、沒有帳號、沒有外掛生態。名字也想過——Plume，法文裡的羽毛，也是落筆的羽毛筆。輕，而且我會拿來閱讀，並且用心寫字。
+
+### 為什麼閱讀器也要好寫
+
+一開始只想要個閱讀器。但既然開了就能改，那「改」這件事就不能將就。寫長文的時候，滿屏的段落會分心，於是有了專注模式——只有游標所在的段落是亮的，其餘淡下去。一直往下打字，視線得追著游標跑到螢幕底，於是有了打字機模式——游標行釘在正中央，文字往上捲，眼睛不用動。寫完要貼到別的地方，於是有了複製 HTML，連數學公式都幫你轉成 MathML。
+
+這些都是 Byword 那類沉浸式寫作工具教我的事。Plume 想把「開箱即讀」和「寫得舒服」放進同一個視窗——讀別人的，也寫自己的。
 
 ---
 
