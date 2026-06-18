@@ -6,6 +6,15 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-06-18
+
+### Added
+
+- Native menu bar: native menus on macOS/Windows (Plume, File, Edit, View, Help) — file, edit, and view actions all have menu items with accelerators; Focus / Typewriter modes stay in sync as checked menu states
+- Keyboard shortcuts overlay (Cmd+/): a floating cheat sheet listing every shortcut, showing ⌘ or Ctrl automatically per platform
+- Auto theme: the theme toggle gains an "Auto" state that follows the system light/dark setting, switching between Vol de Nuit (dark) and Inkstone (light); the three states cycle Vol de Nuit → Inkstone → Auto
+- Reading font preferences: in read mode, choose the body font (Default, Serif, Sans, Mono) and adjust size with ⌘=, ⌘-, ⌘0 to enlarge, shrink, or reset
+
 ## [0.6.0] - 2026-06-16
 
 ### Added
