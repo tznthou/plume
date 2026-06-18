@@ -134,8 +134,7 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
       text: radioText(MODE_LABELS[i], document.body.dataset.mode === MODE_ORDER[i]),
       accelerator: MODE_ORDER[i] === "write" ? "CmdOrCtrl+E" : undefined,
       action: () => {
-        cb.onSetMode(MODE_ORDER[idx]);
-        setRadioActive(modeRadio, idx);
+        cb.onSetMode(MODE_ORDER[idx]); // setMode → updateModeMenu 已同步 radio，無需再 setRadioActive
       },
     });
     modeRadio.push({ item, label: MODE_LABELS[i] });

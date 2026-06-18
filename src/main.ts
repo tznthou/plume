@@ -44,6 +44,7 @@ onLoad((kind) => {
 });
 
 const modeSwitch = document.querySelector<HTMLElement>("#mode-switch")!;
+const modeButtons = modeSwitch.querySelectorAll<HTMLButtonElement>("button"); // 靜態三鈕，查一次重用
 updateModeSwitch((document.body.dataset.mode as Mode) || "read"); // 啟動即同步 segmented，避免初始/openExternal 失敗路徑懸空
 
 function setMode(mode: Mode): void {
@@ -68,7 +69,7 @@ function setMode(mode: Mode): void {
 }
 
 function updateModeSwitch(mode: Mode): void {
-  for (const btn of modeSwitch.querySelectorAll<HTMLButtonElement>("button")) {
+  for (const btn of modeButtons) {
     btn.setAttribute("aria-pressed", String(btn.dataset.modeTarget === mode));
   }
 }
@@ -179,7 +180,7 @@ document.querySelector("#btn-fullscreen")!.addEventListener("click", () => {
 document.querySelector("#btn-exit-fullscreen")!.addEventListener("click", () => {
   delete document.body.dataset.fullscreen;
 });
-for (const btn of modeSwitch.querySelectorAll<HTMLButtonElement>("button")) {
+for (const btn of modeButtons) {
   btn.addEventListener("click", () => setMode(btn.dataset.modeTarget as Mode));
 }
 
