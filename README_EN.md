@@ -15,13 +15,13 @@ A desktop Markdown tool that opens straight into reading and gets out of the way
 
 ## Features
 
-Plume treats *reading* and *writing* as two modes: files open into full-width reading by default, and you switch to editing only when you mean to. Both sides are done properly.
+Plume splits reading and writing into three modes — Compose (immersive writing), Split (write against the preview), Read (immersive reading): files open into Read, you switch to Compose when you pick up the pen, and Split is there when you want the preview alongside. Reading and writing as equals — both done properly.
 
 ### Reading
 
 | Feature | What it does |
 |---------|--------------|
-| **Read mode by default** | Files open in full-width reading view (preview centered at 800px). Click "編輯" or Cmd/Ctrl+E to switch to split-pane editing; new files go straight to edit mode |
+| **Three-way switch (Compose / Split / Read)** | A segmented toolbar control: Compose hides the preview and centers the editor; Split is the side-by-side panes; Read is full-width reading (preview centered at 800px). Existing files open in Read, new files in Compose, and Cmd/Ctrl+E jumps to Compose |
 | **Table of contents** | In read mode, click "目錄" to open a sidebar TOC listing h1–h6 headings with hierarchical indentation. Click any heading to scroll to it; updates automatically on each edit |
 | **Fullscreen reading** | Hides the toolbar and status bar, leaving just content and scrolling. Exit with the ✕ button at top-right or Escape; the TOC stays usable |
 | **Drag & drop / folders** | Drop a `.md` to open it; drop a folder to auto-discover and open its README.md — toss a project folder onto Plume and see its README instantly |
@@ -33,9 +33,9 @@ Plume treats *reading* and *writing* as two modes: files open into full-width re
 | Feature | What it does |
 |---------|--------------|
 | **CodeMirror 6 editor** | Line numbers, Markdown syntax highlighting, search & replace, undo/redo; CJK input methods tested — composition never breaks mid-character |
-| **Live preview** | In edit mode, the preview updates within 50ms of typing |
-| **Focus mode** `⌘⇧F` | Only the paragraph under the cursor stays fully visible; the rest fades out. Paragraph boundaries follow blank lines and track the cursor as it moves |
-| **Typewriter mode** `⌘T` | The cursor line stays pinned to the vertical center of the screen while text scrolls up; even the top of the document can be centered |
+| **Live preview** | In Split, the preview updates within 50ms of typing |
+| **Focus mode** `⌘⇧F` | Only the paragraph under the cursor stays fully visible; the rest fades out. Paragraph boundaries follow blank lines and track the cursor as it moves; available in Compose only |
+| **Typewriter mode** `⌘T` | The cursor line stays pinned to the vertical center of the screen while text scrolls up; even the top of the document can be centered — a Compose-only tool |
 | **Copy as HTML** `⌘⇧C` | Renders the Markdown to HTML on the clipboard, ready to paste into a CMS or blog's HTML editor; math is converted to MathML automatically |
 | **HTML export** | Produces a single self-styled `.html` that renders exactly like the preview |
 
@@ -87,7 +87,7 @@ flowchart LR
     Commands -- "fs scope grant" --> Plugins
 ```
 
-**Design principle:** read first, write second — files open into full-width reading, and editing is a deliberate switch. But once you're in the editor, focus mode, typewriter scrolling, and live preview are all there. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, menu, TOC) that changes presentation without touching the data flow. Rust handles file I/O, dialogs, OS integration, and two custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation; also handles folder drops by discovering README.md) and `get_opened_urls` (cold-start file paths from the OS).
+**Design principle:** reading and writing as equals — files open into full-width reading (Read), picking up the pen switches to immersive writing (Compose), with Split in between for writing against the preview. Focus, typewriter, and live preview are all there in the writing modes. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, menu, TOC) that changes presentation without touching the data flow. Rust handles file I/O, dialogs, OS integration, and two custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation; also handles folder drops by discovering README.md) and `get_opened_urls` (cold-start file paths from the OS).
 
 ## Tech stack
 
@@ -146,7 +146,7 @@ npm run test          # Vitest unit tests
 
 ```
 markdown-tool/
-├── index.html              # layout skeleton: toolbar + read/edit dual mode
+├── index.html              # layout skeleton: toolbar + Compose/Split/Read modes
 ├── src/                    # frontend (Vanilla TS)
 │   ├── main.ts             # entry point: module wiring, mode switching
 │   ├── editor.ts           # CodeMirror 6 wrapper
@@ -162,7 +162,7 @@ markdown-tool/
 │   ├── menu.ts             # native menu bar (@tauri-apps/api/menu, built in JS)
 │   ├── shortcuts.ts        # keyboard shortcut overlay (cheat sheet)
 │   ├── statusbar.ts        # status bar: word/line count, render time, unsaved indicator
-│   └── style.css           # layout + dual themes + read/edit modes + preview typography
+│   └── style.css           # layout + dual themes + Compose/Split/Read modes + preview typography
 ├── src-tauri/              # Rust core
 │   ├── src/lib.rs          # Tauri bootstrap + plugins + custom commands
 │   ├── capabilities/       # IPC permission declarations (least privilege)
