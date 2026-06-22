@@ -978,7 +978,7 @@ html[data-theme="vol-de-nuit"] #illos img {
 
 .illo-fox {
   width: 112px;
-  right: calc(50% + 16px);
+  left: 28px;
   bottom: 14px;
   opacity: 0.9;
   filter: drop-shadow(0 0 12px rgba(232, 184, 75, 0.12));
@@ -1041,9 +1041,9 @@ body[data-mode="write"] #editor {
   border-right: none;
 }
 
-body[data-mode="read"] .illo-fox {
-  right: 28px;
-  transform: scaleX(-1);
+/* 參：雙欄工作台空間擠，插圖（狐狸/飛機）一律隱藏；撰、閱才出現，狐狸同在左下角版面一致 */
+body[data-mode="split"] #illos {
+  display: none;
 }
 
 /* ===== 全螢幕閱讀 ===== */
