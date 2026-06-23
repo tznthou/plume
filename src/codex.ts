@@ -41,10 +41,22 @@ let switchSelect: HTMLSelectElement | null = null;
 
 // ----- 持久化（仿 recent.ts） -----
 
+// 驗 field 型別：path 會直接當 list_codex_files 的 root 傳進 Rust IPC，
+// 過濾 malformed/被竄改的持久化項（fail-close 輸入驗證）
+function isValidCodexMeta(x: unknown): x is CodexMeta {
+  return (
+    typeof x === "object" &&
+    x !== null &&
+    typeof (x as CodexMeta).path === "string" &&
+    (x as CodexMeta).path.length > 0 &&
+    typeof (x as CodexMeta).name === "string"
+  );
+}
+
 async function loadCodexList(): Promise<CodexMeta[]> {
   try {
     const list = await (await getStore()).get<CodexMeta[]>(KEY);
-    return Array.isArray(list) ? list : []; // store 損毀靜默重建空清單
+    return Array.isArray(list) ? list.filter(isValidCodexMeta) : []; // store 損毀/竄改靜默過濾
   } catch {
     return [];
   }

@@ -138,6 +138,25 @@ describe("codex store", () => {
     expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/a", name: "a" }]);
   });
 
+  it("test_restoreCodices_filtersMalformedEntries", async () => {
+    storeMocks.data.set("codices", [
+      { path: "/proj/good", name: "good" },
+      { path: 123, name: null }, // 竄改：非字串
+      { name: "no-path" }, // 缺 path
+      "not-an-object",
+    ]);
+    const codex = await loadCodexModule();
+    await codex.restoreCodices();
+    // 開新冊觸發 save，驗證持久化清單已濾掉 malformed（只剩 good + 新冊）
+    dialogMocks.open.mockResolvedValueOnce("/proj/new");
+    coreMocks.invoke.mockResolvedValueOnce([]);
+    await codex.openCodexFolder();
+    expect(storeMocks.data.get("codices")).toEqual([
+      { path: "/proj/new", name: "new" },
+      { path: "/proj/good", name: "good" },
+    ]);
+  });
+
   it("test_switchCodex_enumFails_alertsNotSilent", async () => {
     const codex = await loadCodexModule();
     dialogMocks.open.mockResolvedValueOnce("/proj/a");
