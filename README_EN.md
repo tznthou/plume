@@ -27,6 +27,7 @@ Plume splits reading and writing into three modes — Compose (immersive writing
 | **Drag & drop / folders** | Drop a `.md` to open it; drop a folder to auto-discover and open its README.md — toss a project folder onto Plume and see its README instantly |
 | **File association** | Right-click a `.md` in Finder → Open With → Plume, or make Plume the default. Double-clicking another `.md` while Plume is running loads it in the same window |
 | **Recent files** | Last 10 files survive restarts, file-access permissions included |
+| **Codex (folders)** | Open a whole folder as a "Codex": the sidebar lists every `.md` underneath in a nested tree — click to open, mount several codices at once and switch via a dropdown, with each switch re-listing to reflect changes on disk. Read-only browsing — creating/deleting/renaming is left to your file manager; the app never takes directory write access. Open it from the toolbar "冊" button or File ▸ Open Codex Folder |
 
 ### Writing
 
@@ -73,10 +74,11 @@ flowchart LR
         UX["experience layer<br/>theme (three-state)<br/>reading-prefs (font/size)<br/>focus-mode / typewriter<br/>menu / shortcuts / toc"]
         File["file.ts<br/>open / save / export<br/>document state (path / dirty)"]
         Recent["recent.ts<br/>recent files"]
+        Codex["codex.ts<br/>Codex: folder file tree"]
     end
     subgraph Rust["Rust core (src-tauri)"]
         Plugins["official plugins<br/>dialog / fs / store<br/>persisted-scope / opener"]
-        Commands["custom commands<br/>grant_scope / get_opened_urls"]
+        Commands["custom commands<br/>grant_scope / get_opened_urls<br/>list_codex_files"]
     end
     Editor -- "onChange (debounce 50ms)" --> Renderer --> Preview
     UX -. "acts on editor / preview / document" .-> Pipeline
@@ -84,10 +86,12 @@ flowchart LR
     Recent -- IPC --> Plugins
     Preview -- "external links via IPC" --> Plugins
     File -- "drag-drop / file assoc" --> Commands
+    Codex -- "read-only .md listing (no scope)" --> Commands
+    Codex -- "open on click" --> File
     Commands -- "fs scope grant" --> Plugins
 ```
 
-**Design principle:** reading and writing as equals — files open into full-width reading (Read), picking up the pen switches to immersive writing (Compose), with Split in between for writing against the preview. Focus, typewriter, and live preview are all there in the writing modes. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, menu, TOC) that changes presentation without touching the data flow. Rust handles file I/O, dialogs, OS integration, and two custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation; also handles folder drops by discovering README.md) and `get_opened_urls` (cold-start file paths from the OS).
+**Design principle:** reading and writing as equals — files open into full-width reading (Read), picking up the pen switches to immersive writing (Compose), with Split in between for writing against the preview. Focus, typewriter, and live preview are all there in the writing modes. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, menu, TOC, Codex) that changes presentation without touching the data flow. Rust handles file I/O, dialogs, OS integration, and three custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation; also handles folder drops by discovering README.md), `get_opened_urls` (cold-start file paths from the OS), and `list_codex_files` (a read-only recursive listing of a Codex folder's `.md` files — returns paths only and never opens a directory fs scope; "can list a directory" is not "can read its contents," so clicking a file still goes through per-file `grant_scope` and the load-bearing wall stays intact).
 
 ## Tech stack
 
@@ -104,7 +108,7 @@ flowchart LR
 | mermaid | 11.x | Diagram rendering (lazy-loaded, `securityLevel: "strict"`) |
 | DOMPurify | 3.x | XSS sanitization of rendered output (non-negotiable, see SPEC) |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
-| Vitest | 4.x | Unit tests (51 of them, rendering-pipeline focus) |
+| Vitest | 4.x | Unit tests (65 of them, rendering pipeline and Codex tree-building) |
 
 > Front matter hiding uses a regex strip ahead of `render()` rather than `markdown-it-front-matter` — that package has an edge case where a document starting with `---` but never closing it gets swallowed whole.
 
@@ -146,7 +150,7 @@ npm run test          # Vitest unit tests
 
 ```
 markdown-tool/
-├── index.html              # layout skeleton: toolbar + Compose/Split/Read modes
+├── index.html              # layout skeleton: toolbar + Compose/Split/Read modes + Codex sidebar
 ├── src/                    # frontend (Vanilla TS)
 │   ├── main.ts             # entry point: module wiring, mode switching
 │   ├── editor.ts           # CodeMirror 6 wrapper
@@ -155,6 +159,7 @@ markdown-tool/
 │   ├── toc.ts              # table of contents: heading extraction + click-to-scroll
 │   ├── file.ts             # open/save/save-as/HTML export, document state (path, dirty)
 │   ├── recent.ts           # recent files (plugin-store)
+│   ├── codex.ts            # Codex: read-only folder listing + nested file tree + multi-codex switching
 │   ├── theme.ts            # three-state theme (Vol de Nuit/Inkstone/Auto), matchMedia listener
 │   ├── reading-prefs.ts    # reading font & size preferences (plugin-store persisted)
 │   ├── focus-mode.ts       # focus mode: spotlight the cursor's paragraph, fade the rest
