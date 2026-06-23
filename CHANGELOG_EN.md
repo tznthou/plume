@@ -6,6 +6,24 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-23
+
+### Added
+
+- Codex folder file management: open a folder as a "Codex" — the sidebar lists every `.md` underneath in a nested tree, click to open. Mount several codices at once and switch via a dropdown, with each switch re-listing to reflect changes on disk. Read-only browsing — creating/deleting/renaming is left to your file manager; the app never takes directory write access. Open it from the toolbar "冊" button or File ▸ Open Codex Folder
+
+### Changed
+
+- Vol de Nuit fox illustration: when the Codex sidebar is open in Read or Split mode, the bottom-left fox moves to the bottom-right and mirrors horizontally so it no longer sits over the file tree; Compose mode (no sidebar) keeps it bottom-left
+
+### Fixed
+
+- Opening a Codex in Compose did nothing: Compose hides the sidebar, so opening a Codex there built the tree but left it hidden — it looked unresponsive. Opening a Codex now switches to Split and reveals the sidebar, since browsing a folder means leaving the immersive writing state
+
+### Security
+
+- Codex folder browsing uses a read-only listing: a new Rust command `list_codex_files` recursively returns the `.md` paths under a Codex and never opens a directory fs scope. "Can list a directory" stays separate from "can read its contents" — clicking a file still goes through the existing per-file grant (`grant_scope`), keeping the XSS load-bearing wall at zero added exposure. Custom commands go from two (`grant_scope`, `get_opened_urls`) to three
+
 ## [0.8.0] - 2026-06-19
 
 ### Added
