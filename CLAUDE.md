@@ -20,7 +20,7 @@
 - 前端 Vanilla TS，不引入 UI 框架（React/Vue/Svelte 皆不要）
 - Markdown 渲染留在前端（markdown-it），**不走 IPC 到 Rust**——IPC 序列化成本 > 解析收益
 - 渲染輸出必過 DOMPurify，任何功能（含匯出 HTML）不可繞過——Tauri webview 內 XSS 可觸 IPC
-- Rust 端只用官方 plugin（dialog/fs/store/persisted-scope/opener），自訂 command 僅限 `grant_scope`（外部路徑授權 fs scope）和 `get_opened_urls`（冷啟動檔案路徑）兩個——為拖曳開檔與 OS 檔案關聯所需的最小破例
+- Rust 端只用官方 plugin（dialog/fs/store/persisted-scope/opener），自訂 command 僅限 `grant_scope`（外部路徑授權 fs scope）、`get_opened_urls`（冷啟動檔案路徑）、`list_codex_files`（冊：唯讀遞迴列舉資料夾 `.md`，**不開目錄 fs scope**）三個——前二為拖曳開檔與 OS 檔案關聯、後者為冊資料夾瀏覽所需的最小破例（列舉不授權，點檔仍走 `grant_scope` 單檔授權）
 - highlight.js 只註冊語言子集（見 docs/SPEC.md），不全量 import，不開自動偵測
 - 編輯內容唯一真相來源是 CM6 EditorState，不另存字串副本
 - fs 權限走 dialog 授權 + persisted-scope，capabilities 不開全域路徑；外部路徑（拖曳/檔案關聯）透過 `grant_scope` command 在 Rust 端驗證副檔名後動態授權

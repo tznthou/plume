@@ -58,6 +58,47 @@ fn is_markdown(path: &std::path::Path) -> bool {
         .is_some_and(|e| matches!(e.to_lowercase().as_str(), "md" | "markdown"))
 }
 
+const MAX_DEPTH: usize = 16;
+
+// Read-only recursive listing of .md files under a folder (the "Codex" feature).
+// Pure std::fs — does NOT touch fs_scope / allow_file: listing grants no scope.
+// Opening a file still goes through per-file grant_scope (load-bearing wall intact).
+#[tauri::command]
+fn list_codex_files(root: String) -> Result<Vec<String>, String> {
+    let base = PathBuf::from(&root)
+        .canonicalize()
+        .map_err(|e| e.to_string())?;
+    if !base.is_dir() {
+        return Err("Path is not a folder".into());
+    }
+    let mut out = Vec::new();
+    walk(&base, 0, &mut out);
+    Ok(out)
+}
+
+fn walk(dir: &std::path::Path, depth: usize, out: &mut Vec<String>) {
+    if depth > MAX_DEPTH {
+        return;
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return; // unreadable dir: skip silently (mirrors find_readme .ok()?)
+    };
+    for entry in entries.filter_map(|e| e.ok()) {
+        let path = entry.path();
+        let Ok(meta) = path.symlink_metadata() else {
+            continue;
+        };
+        if meta.file_type().is_symlink() {
+            continue; // skip symlinks: avoid out-of-tree shortcuts + loops
+        }
+        if meta.is_dir() {
+            walk(&path, depth + 1, out);
+        } else if meta.is_file() && is_markdown(&path) {
+            out.push(path.to_string_lossy().into_owned());
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -67,7 +108,11 @@ pub fn run() {
         .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_opener::init())
         .manage(OpenedUrls(Mutex::new(None)))
-        .invoke_handler(tauri::generate_handler![grant_scope, get_opened_urls])
+        .invoke_handler(tauri::generate_handler![
+            grant_scope,
+            get_opened_urls,
+            list_codex_files
+        ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
 

@@ -174,4 +174,30 @@ describe("file", () => {
     expect(fsMocks.readTextFile).not.toHaveBeenCalled();
     expect(editorMocks.setContent).not.toHaveBeenCalled();
   });
+
+  it("test_file_openExternal_codexKind_firesCodexLoad", async () => {
+    coreMocks.invoke.mockResolvedValue("/codex/note.md");
+    fsMocks.readTextFile.mockResolvedValue("# 冊內文章");
+
+    const file = await loadFileModule();
+    const loadSpy = vi.fn();
+    file.onLoad(loadSpy);
+    await file.openExternal("/codex/note.md", "codex");
+
+    // 決策 1：冊點檔走 "codex" kind，main 的 onLoad 據此停在當前模式（不切閱）
+    expect(loadSpy).toHaveBeenCalledWith("codex");
+    expect(editorMocks.setContent).toHaveBeenCalledWith("# 冊內文章");
+  });
+
+  it("test_file_openExternal_defaultKind_firesOpen", async () => {
+    coreMocks.invoke.mockResolvedValue("/real/dragged.md");
+    fsMocks.readTextFile.mockResolvedValue("# 拖曳");
+
+    const file = await loadFileModule();
+    const loadSpy = vi.fn();
+    file.onLoad(loadSpy);
+    await file.openExternal("/tmp/dragged.md"); // 不傳 kind → 向後相容
+
+    expect(loadSpy).toHaveBeenCalledWith("open"); // 既有行為不變
+  });
 });

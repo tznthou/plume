@@ -43,7 +43,7 @@ export function onDirtyChange(cb: (dirty: boolean) => void): void {
 
 // 開檔/新檔通知（main 接到後讓預覽下次渲染回頂）。沿用 onDirtyChange 的 callback 模式，
 // 不讓 file 狀態層直接相依 preview 視圖層。
-export type LoadKind = "new" | "open";
+export type LoadKind = "new" | "open" | "codex";
 let loadListener: ((kind: LoadKind) => void) | null = null;
 
 export function onLoad(cb: (kind: LoadKind) => void): void {
@@ -111,7 +111,7 @@ export async function openRecent(path: string): Promise<void> {
   await loadPath(path);
 }
 
-async function loadPath(path: string): Promise<void> {
+async function loadPath(path: string, kind: LoadKind = "open"): Promise<void> {
   try {
     const content = await readTextFile(path);
     loadContent(content);
@@ -119,7 +119,7 @@ async function loadPath(path: string): Promise<void> {
     doc.dirty = false;
     await updateTitle();
     await addRecent(path);
-    loadListener?.("open");
+    loadListener?.(kind);
   } catch (e) {
     // SPEC 錯誤處理：讀檔失敗不載入、不改變現有編輯內容，非阻斷提示＋自最近清單移除
     await message(`無法開啟檔案：${String(e)}`, { title: "開啟失敗", kind: "error" });
@@ -269,13 +269,13 @@ export async function exportHtml(): Promise<void> {
 
 let opening = false;
 
-export async function openExternal(path: string): Promise<void> {
+export async function openExternal(path: string, kind: LoadKind = "open"): Promise<void> {
   if (opening) return;
   opening = true;
   try {
     if (!(await confirmLoseChanges())) return;
     const resolved = await invoke<string>("grant_scope", { path });
-    await loadPath(resolved);
+    await loadPath(resolved, kind);
   } catch (e) {
     await message(`無法開啟檔案：${String(e)}`, {
       title: "開啟失敗",

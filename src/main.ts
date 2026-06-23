@@ -23,6 +23,7 @@ import {
   saveFile,
 } from "./file";
 import { getRecent } from "./recent";
+import { initCodex, openCodexFolder, restoreCodices } from "./codex";
 import { currentChoice, initTheme, onThemeChange, setTheme, toggleTheme } from "./theme";
 import { currentFont, decreaseSize, increaseSize, initReadingPrefs, resetSize, setFont } from "./reading-prefs";
 import { initStatusbar, setDirty, updateStats } from "./statusbar";
@@ -36,10 +37,12 @@ const previewEl = document.querySelector<HTMLElement>("#preview")!;
 initEditor(editorEl);
 initPreview(previewEl, getScrollDOM());
 initToc(document.querySelector<HTMLElement>("#toc")!, previewEl);
+initCodex(document.querySelector<HTMLElement>("#codex")!);
 initStatusbar();
 onDirtyChange(setDirty); // dirty 指示：03 指針垂落 / 05 硃砂印
 onLoad((kind) => {
   scrollToTopOnNextUpdate();
+  if (kind === "codex") return; // 冊點檔：停在當前模式（不強制切閱），沉浸/對照不被打斷
   setMode(kind === "new" ? "write" : "read"); // 新檔進「撰」沉浸寫、開檔進「閱」先讀
 });
 
@@ -77,11 +80,21 @@ function updateModeSwitch(mode: Mode): void {
 function toggleToc(): void {
   document.body.dataset.toc = document.body.dataset.toc === "open" ? "closed" : "open";
 }
+function toggleCodex(): void {
+  document.body.dataset.codex = document.body.dataset.codex === "open" ? "closed" : "open";
+}
+// 開新冊後自動展開側欄，讓使用者立即看到檔案樹
+function openCodexAndReveal(): void {
+  void openCodexFolder().then(() => {
+    document.body.dataset.codex = "open";
+  });
+}
 onThemeChange(() => update(render(getContent())));
 void Promise.all([initTheme(), initReadingPrefs()]).then(() => {
   void initMenu({
     onNew: doNew,
     onOpen: doOpen,
+    onOpenCodex: openCodexAndReveal,
     onSave: doSave,
     onSaveAs: doSaveAs,
     onExport: () => void exportHtml(),
@@ -174,6 +187,8 @@ document.querySelector("#btn-theme")!.addEventListener("click", () => {
   });
 });
 document.querySelector("#btn-toc")!.addEventListener("click", toggleToc);
+document.querySelector("#btn-codex")!.addEventListener("click", toggleCodex);
+document.querySelector(".codex-add")!.addEventListener("click", openCodexAndReveal);
 document.querySelector("#btn-fullscreen")!.addEventListener("click", () => {
   document.body.dataset.fullscreen = "on";
 });
@@ -197,6 +212,7 @@ window.addEventListener("keydown", (e) => {
 
 void initFileModule(); // onCloseRequested dirty 攔截 + 初始視窗標題
 void refreshRecentUI(); // 啟動時載入既有清單
+void restoreCodices(); // 啟動載入冊清單填下拉（不自動列舉，使用者選冊才開）
 
 // ----- 拖曳開檔（drag & drop .md onto window） -----
 

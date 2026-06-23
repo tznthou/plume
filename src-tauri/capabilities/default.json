@@ -20,6 +20,7 @@
       "allow": [{ "url": "https://**" }, { "url": "http://**" }]
     },
     "allow-grant-scope",
-    "allow-get-opened-urls"
+    "allow-get-opened-urls",
+    "allow-list-codex-files"
   ]
 }

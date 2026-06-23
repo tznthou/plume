@@ -10,6 +10,7 @@ export type Mode = "read" | "write" | "split";
 export interface MenuCallbacks {
   onNew: () => void;
   onOpen: () => void;
+  onOpenCodex: () => void;
   onSave: () => void;
   onSaveAs: () => void;
   onExport: () => void;
@@ -84,6 +85,7 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
     items: [
       { text: "New", accelerator: "CmdOrCtrl+N", action: () => cb.onNew() },
       { text: "Open…", accelerator: "CmdOrCtrl+O", action: () => cb.onOpen() },
+      { text: "Open Codex Folder…", action: () => cb.onOpenCodex() },
       { item: "Separator" },
       { text: "Save", accelerator: "CmdOrCtrl+S", action: () => cb.onSave() },
       { text: "Save As…", accelerator: "CmdOrCtrl+Shift+S", action: () => cb.onSaveAs() },

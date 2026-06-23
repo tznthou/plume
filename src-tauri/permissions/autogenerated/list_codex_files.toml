@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-codex-files"
+description = "Enables the list_codex_files command without any pre-configured scope."
+commands.allow = ["list_codex_files"]
+
+[[permission]]
+identifier = "deny-list-codex-files"
+description = "Denies the list_codex_files command without any pre-configured scope."
+commands.deny = ["list_codex_files"]

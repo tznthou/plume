@@ -1140,6 +1140,128 @@ html[data-theme="inkstone"] #toc {
   background: var(--bg-bar);
 }
 
+/* ===== 冊（Codex）檔案樹側邊欄 ===== */
+
+#codex {
+  display: none;
+  width: 240px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  overscroll-behavior: none;
+  padding: 12px 8px;
+  border-right: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 12.5px;
+}
+
+/* 顯示條件：冊開關開啟、且非撰態（撰＝沉浸寫，自動隱藏側欄，決策 49） */
+body[data-codex="open"]:not([data-mode="write"]) #codex {
+  display: block;
+}
+
+.codex-header {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.codex-switch {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.codex-add {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg-panel);
+  color: var(--fg-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.codex-add:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+#codex ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+#codex ul ul {
+  padding-left: 14px; /* 每層子目錄縮排 */
+}
+
+/* 檔案葉節點：點開檔，單行省略 */
+#codex li[data-file] {
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--fg-muted);
+  line-height: 1.5;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#codex li[data-file]:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* 資料夾標籤：三角 + 名稱，點摺疊 */
+.codex-dir-label {
+  display: block;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--fg-strong);
+  font-weight: 600;
+  line-height: 1.5;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.codex-dir-label:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.codex-dir-label::before {
+  content: "▸";
+  display: inline-block;
+  width: 1em;
+  margin-right: 2px;
+  color: var(--fg-muted);
+  transition: transform 0.12s;
+}
+
+#codex li[data-dir][data-open="true"] > .codex-dir-label::before {
+  transform: rotate(90deg);
+}
+
+#codex li[data-dir][data-open="false"] > ul {
+  display: none;
+}
+
+html[data-theme="vol-de-nuit"] #codex li[data-file]:hover,
+html[data-theme="vol-de-nuit"] .codex-dir-label:hover {
+  box-shadow: 0 0 8px rgba(232, 184, 75, 0.12);
+}
+
+html[data-theme="inkstone"] #codex {
+  background: var(--bg-bar);
+}
+
 /* ===== 拖曳回饋 ===== */
 
 body.drag-hover::after {

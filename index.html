@@ -20,6 +20,7 @@
     <header id="toolbar">
       <button id="btn-new" type="button" class="edit-only">新增</button>
       <button id="btn-open" type="button">開啟</button>
+      <button id="btn-codex" type="button" aria-label="冊：資料夾檔案樹">冊</button>
       <button id="btn-save" type="button" class="edit-only">儲存</button>
       <button id="btn-export" type="button">匯出</button>
       <button id="btn-theme" type="button" aria-label="切換佈景主題">
@@ -39,6 +40,13 @@
 
     <button id="btn-exit-fullscreen" type="button" aria-label="退出全螢幕">✕</button>
     <main>
+      <aside id="codex">
+        <div class="codex-header">
+          <select class="codex-switch" aria-label="切換冊"></select>
+          <button class="codex-add" type="button" aria-label="開啟冊資料夾" title="開啟冊資料夾">+</button>
+        </div>
+        <ul class="codex-tree"></ul>
+      </aside>
       <aside id="toc"><ul></ul></aside>
       <div id="editor"></div>
       <div id="preview"></div>
