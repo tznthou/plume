@@ -1046,6 +1046,15 @@ body[data-mode="split"] #illos {
   display: none;
 }
 
+/* 閱態開冊：冊側欄佔左側，左下狐狸（left:28px）會疊住檔案樹；
+   移到右下並水平鏡像（朝向內側內容），避開側欄——恢復 PR #10 之前的閱讀右下鏡像佈局。
+   撰態本就無側欄（:not write），狐狸照常在左下 */
+body[data-codex="open"]:not([data-mode="write"]) .illo-fox {
+  left: auto;
+  right: 28px;
+  transform: scaleX(-1);
+}
+
 /* ===== 全螢幕閱讀 ===== */
 
 body[data-fullscreen="on"] #toolbar,
