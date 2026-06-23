@@ -81,11 +81,18 @@ function toggleToc(): void {
   document.body.dataset.toc = document.body.dataset.toc === "open" ? "closed" : "open";
 }
 function toggleCodex(): void {
+  if (document.body.dataset.mode === "write") {
+    // 撰態側欄被沉浸規則隱藏（決策 49）；點「冊」＝要瀏覽檔案＝切出撰態並開側欄，避免「點了沒反應」
+    setMode("split");
+    document.body.dataset.codex = "open";
+    return;
+  }
   document.body.dataset.codex = document.body.dataset.codex === "open" ? "closed" : "open";
 }
-// 開新冊後自動展開側欄，讓使用者立即看到檔案樹
+// 開冊後顯示側欄；若在撰態則切「參」態（撰態藏側欄，開冊＝瀏覽檔案＝離開沉浸寫作）
 function openCodexAndReveal(): void {
   void openCodexFolder().then(() => {
+    if (document.body.dataset.mode === "write") setMode("split");
     document.body.dataset.codex = "open";
   });
 }
