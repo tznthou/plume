@@ -67,10 +67,9 @@ export function buildTree(rootPath: string, files: string[]): TreeNode[] {
     const prefix = rootPath + sep;
     const rel = file.startsWith(prefix) ? file.slice(prefix.length) : file;
     const parts = rel.split(/[/\\]/);
-    let parentPath = rootPath;
     let parent = root;
     for (let i = 0; i < parts.length - 1; i++) {
-      const dirPath = parentPath + sep + parts[i];
+      const dirPath = parent.path + sep + parts[i];
       let dir = dirCache.get(dirPath);
       if (!dir) {
         dir = { name: parts[i], path: dirPath, isDir: true, children: [] };
@@ -78,7 +77,6 @@ export function buildTree(rootPath: string, files: string[]): TreeNode[] {
         parent.children.push(dir);
       }
       parent = dir;
-      parentPath = dirPath;
     }
     parent.children.push({
       name: parts[parts.length - 1],
