@@ -17,14 +17,14 @@ const storeMocks = vi.hoisted(() => {
   };
 });
 
-const dialogMocks = vi.hoisted(() => ({ open: vi.fn() }));
+const dialogMocks = vi.hoisted(() => ({ open: vi.fn(), message: vi.fn() }));
 const coreMocks = vi.hoisted(() => ({ invoke: vi.fn() }));
 const fileMocks = vi.hoisted(() => ({ openExternal: vi.fn(() => Promise.resolve()) }));
 
 vi.mock("@tauri-apps/plugin-store", () => ({
   load: vi.fn(() => Promise.resolve(storeMocks.fakeStore)),
 }));
-vi.mock("@tauri-apps/plugin-dialog", () => ({ open: dialogMocks.open }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open: dialogMocks.open, message: dialogMocks.message }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: coreMocks.invoke }));
 vi.mock("../src/file", () => ({ openExternal: fileMocks.openExternal }));
 
@@ -136,5 +136,21 @@ describe("codex store", () => {
     dialogMocks.open.mockResolvedValueOnce("/proj/a");
     await codex.openCodexFolder();
     expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/a", name: "a" }]);
+  });
+
+  it("test_switchCodex_enumFails_alertsNotSilent", async () => {
+    const codex = await loadCodexModule();
+    dialogMocks.open.mockResolvedValueOnce("/proj/a");
+    coreMocks.invoke.mockResolvedValueOnce(["/proj/a/x.md"]);
+    await codex.openCodexFolder();
+    dialogMocks.open.mockResolvedValueOnce("/proj/b");
+    coreMocks.invoke.mockResolvedValueOnce(["/proj/b/y.md"]);
+    await codex.openCodexFolder();
+
+    // 切回 A 但資料夾已被刪 → 列舉失敗：提示而非靜默（避免 select/樹 stale 不一致）
+    coreMocks.invoke.mockRejectedValueOnce(new Error("Path is not a folder"));
+    await codex.switchCodex("/proj/a");
+
+    expect(dialogMocks.message).toHaveBeenCalled();
   });
 });

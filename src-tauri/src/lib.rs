@@ -59,6 +59,7 @@ fn is_markdown(path: &std::path::Path) -> bool {
 }
 
 const MAX_DEPTH: usize = 16;
+const MAX_FILES: usize = 5000; // 上限：防誤選巨大資料夾拖慢遍歷 / 無界 Vec
 
 // Read-only recursive listing of .md files under a folder (the "Codex" feature).
 // Pure std::fs — does NOT touch fs_scope / allow_file: listing grants no scope.
@@ -77,13 +78,16 @@ fn list_codex_files(root: String) -> Result<Vec<String>, String> {
 }
 
 fn walk(dir: &std::path::Path, depth: usize, out: &mut Vec<String>) {
-    if depth > MAX_DEPTH {
+    if depth > MAX_DEPTH || out.len() >= MAX_FILES {
         return;
     }
     let Ok(entries) = std::fs::read_dir(dir) else {
         return; // unreadable dir: skip silently (mirrors find_readme .ok()?)
     };
     for entry in entries.filter_map(|e| e.ok()) {
+        if out.len() >= MAX_FILES {
+            return; // 達檔案數上限即停（含遞迴中途），避免無界遍歷
+        }
         let path = entry.path();
         let Ok(meta) = path.symlink_metadata() else {
             continue;

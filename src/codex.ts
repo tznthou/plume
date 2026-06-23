@@ -4,7 +4,7 @@
 // 冊清單持久化 codex.json，只存根路徑——每次切冊/啟動重新列舉（反映 Finder 增刪）；
 // 授權靠 persisted-scope 自動恢復「點過的單檔」，前端不存授權。
 import { invoke } from "@tauri-apps/api/core";
-import { open } from "@tauri-apps/plugin-dialog";
+import { message, open } from "@tauri-apps/plugin-dialog";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { openExternal } from "./file";
 
@@ -118,7 +118,11 @@ async function loadCodex(folder: string, isNew: boolean): Promise<void> {
   try {
     files = await invoke<string[]>("list_codex_files", { root: folder });
   } catch {
-    return; // 列舉失敗（資料夾已刪/移）：靜默不切，保留現況
+    // 列舉失敗（資料夾已刪/移）：提示 + 復原下拉到目前的冊，
+    // 避免 select 已切到新冊、樹卻仍是舊冊的 stale 陷阱（從錯誤專案開檔）
+    await message("無法讀取此資料夾，可能已被移動或刪除。", { title: "開啟冊失敗", kind: "error" });
+    renderHeader();
+    return;
   }
   if (isNew && !codexList.some((c) => c.path === folder)) {
     const name = folder.split(/[/\\]/).pop() || folder;
