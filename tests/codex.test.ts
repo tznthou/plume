@@ -17,14 +17,14 @@ const storeMocks = vi.hoisted(() => {
   };
 });
 
-const dialogMocks = vi.hoisted(() => ({ open: vi.fn(), message: vi.fn() }));
+const dialogMocks = vi.hoisted(() => ({ message: vi.fn() }));
 const coreMocks = vi.hoisted(() => ({ invoke: vi.fn() }));
 const fileMocks = vi.hoisted(() => ({ openExternal: vi.fn(() => Promise.resolve()) }));
 
 vi.mock("@tauri-apps/plugin-store", () => ({
   load: vi.fn(() => Promise.resolve(storeMocks.fakeStore)),
 }));
-vi.mock("@tauri-apps/plugin-dialog", () => ({ open: dialogMocks.open, message: dialogMocks.message }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ message: dialogMocks.message }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: coreMocks.invoke }));
 vi.mock("../src/file", () => ({ openExternal: fileMocks.openExternal }));
 
@@ -85,26 +85,22 @@ describe("buildTree", () => {
 });
 
 describe("codex store", () => {
-  it("test_openCodexFolder_invokesListWithRoot", async () => {
+  it("test_openCodexFolder_picksAndPersists", async () => {
     const codex = await loadCodexModule();
-    dialogMocks.open.mockResolvedValueOnce("/proj/a");
-    coreMocks.invoke.mockResolvedValueOnce(["/proj/a/x.md"]);
-
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: ["/proj/a/x.md"] });
     await codex.openCodexFolder();
-
-    expect(coreMocks.invoke).toHaveBeenCalledWith("list_codex_files", { root: "/proj/a" });
+    expect(coreMocks.invoke).toHaveBeenCalledWith("pick_codex_root");
     expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/a", name: "a" }]);
   });
 
   it("test_openCodexFolder_twoFolders_prependsAndPersists", async () => {
     const codex = await loadCodexModule();
-    dialogMocks.open.mockResolvedValueOnce("/proj/a");
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: [] });
     await codex.openCodexFolder();
-    dialogMocks.open.mockResolvedValueOnce("/proj/b");
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/b", files: [] });
     await codex.openCodexFolder();
-
     expect(storeMocks.data.get("codices")).toEqual([
-      { path: "/proj/b", name: "b" }, // 新冊置頂
+      { path: "/proj/b", name: "b" },
       { path: "/proj/a", name: "a" },
     ]);
     expect(storeMocks.fakeStore.save).toHaveBeenCalled();
@@ -112,28 +108,25 @@ describe("codex store", () => {
 
   it("test_openCodexFolder_duplicate_dedupes", async () => {
     const codex = await loadCodexModule();
-    dialogMocks.open.mockResolvedValueOnce("/proj/a");
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: [] });
     await codex.openCodexFolder();
-    dialogMocks.open.mockResolvedValueOnce("/proj/a"); // 再開同一冊
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: [] });
     await codex.openCodexFolder();
-
     expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/a", name: "a" }]);
   });
 
-  it("test_openCodexFolder_cancel_noInvoke", async () => {
+  it("test_openCodexFolder_cancel_noPersist", async () => {
     const codex = await loadCodexModule();
-    dialogMocks.open.mockResolvedValueOnce(null); // 使用者取消
+    coreMocks.invoke.mockResolvedValueOnce(null); // 使用者取消
     await codex.openCodexFolder();
-    expect(coreMocks.invoke).not.toHaveBeenCalled();
+    expect(storeMocks.data.get("codices")).toBeUndefined();
   });
 
   it("test_restoreCodices_corruptStore_rebuildsEmpty", async () => {
-    storeMocks.data.set("codices", "不是陣列"); // store 損毀
+    storeMocks.data.set("codices", "不是陣列");
     const codex = await loadCodexModule();
-    await expect(codex.restoreCodices()).resolves.toBeUndefined(); // 靜默不 throw
-
-    // 損毀殘留不污染：開新冊後清單只含新冊
-    dialogMocks.open.mockResolvedValueOnce("/proj/a");
+    await expect(codex.restoreCodices()).resolves.toBeUndefined();
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: [] });
     await codex.openCodexFolder();
     expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/a", name: "a" }]);
   });
@@ -147,9 +140,7 @@ describe("codex store", () => {
     ]);
     const codex = await loadCodexModule();
     await codex.restoreCodices();
-    // 開新冊觸發 save，驗證持久化清單已濾掉 malformed（只剩 good + 新冊）
-    dialogMocks.open.mockResolvedValueOnce("/proj/new");
-    coreMocks.invoke.mockResolvedValueOnce([]);
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/new", files: [] });
     await codex.openCodexFolder();
     expect(storeMocks.data.get("codices")).toEqual([
       { path: "/proj/new", name: "new" },
@@ -159,17 +150,13 @@ describe("codex store", () => {
 
   it("test_switchCodex_enumFails_alertsNotSilent", async () => {
     const codex = await loadCodexModule();
-    dialogMocks.open.mockResolvedValueOnce("/proj/a");
-    coreMocks.invoke.mockResolvedValueOnce(["/proj/a/x.md"]);
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: ["/proj/a/x.md"] });
     await codex.openCodexFolder();
-    dialogMocks.open.mockResolvedValueOnce("/proj/b");
-    coreMocks.invoke.mockResolvedValueOnce(["/proj/b/y.md"]);
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/b", files: ["/proj/b/y.md"] });
     await codex.openCodexFolder();
-
-    // 切回 A 但資料夾已被刪 → 列舉失敗：提示而非靜默（避免 select/樹 stale 不一致）
-    coreMocks.invoke.mockRejectedValueOnce(new Error("Path is not a folder"));
+    // 切回 A 但列舉失敗（已刪/移 或 未授權）→ 提示而非靜默
+    coreMocks.invoke.mockRejectedValueOnce(new Error("Folder is not an approved codex"));
     await codex.switchCodex("/proj/a");
-
     expect(dialogMocks.message).toHaveBeenCalled();
   });
 });
