@@ -1,10 +1,10 @@
 // 冊（Codex）檔案管理 L1（PRD US-7 / 決策 44-49）：開資料夾為「冊」，側邊欄巢狀樹瀏覽 .md，
-// 點檔即編輯，可切換多個冊。安全（決策 46 方案 B）：列舉走 Rust 唯讀 command list_codex_files
-// （不開目錄 fs scope），點檔才沿用 per-file grant_scope（openExternal）。
+// 點檔即編輯，可切換多個冊。開冊走 Rust pick_codex_root 持有原生 dialog 並核准 root；
+// 切冊列舉走 Rust 唯讀 command list_codex_files（不開目錄 fs scope），點檔才沿用 per-file grant_scope（openExternal）。
 // 冊清單持久化 codex.json，只存根路徑——每次切冊/啟動重新列舉（反映 Finder 增刪）；
 // 授權靠 persisted-scope 自動恢復「點過的單檔」，前端不存授權。
 import { invoke } from "@tauri-apps/api/core";
-import { message, open } from "@tauri-apps/plugin-dialog";
+import { message } from "@tauri-apps/plugin-dialog";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { openExternal } from "./file";
 
@@ -112,28 +112,40 @@ function sortTree(nodes: TreeNode[]): void {
 // ----- 對外操作 -----
 
 export async function openCodexFolder(): Promise<void> {
-  const folder = await open({ directory: true });
-  if (typeof folder !== "string") return; // 取消（multiple 未開，回 string | null）
-  await loadCodex(folder, true);
+  // 開冊走 Rust pick_codex_root：dialog 由 Rust 持有，選取的資料夾才獲列舉授權
+  // （前端無法注入任意路徑，防 XSS 任意路徑枚舉，決策 50）。回 canonical root + .md 清單。
+  let pick: { root: string; files: string[] } | null;
+  try {
+    pick = await invoke<{ root: string; files: string[] } | null>("pick_codex_root");
+  } catch {
+    await message("無法開啟資料夾。", { title: "開啟冊失敗", kind: "error" });
+    return;
+  }
+  if (!pick) return; // 使用者取消
+  await applyCodex(pick.root, pick.files, true);
 }
 
 export async function switchCodex(path: string): Promise<void> {
   if (!codexList.some((c) => c.path === path)) return;
-  await loadCodex(path, false);
-}
-
-// 開冊共用：列舉 → 建樹 → 設為當前 → 渲染。isNew 控制是否加入清單並持久化。
-async function loadCodex(folder: string, isNew: boolean): Promise<void> {
   let files: string[];
   try {
-    files = await invoke<string[]>("list_codex_files", { root: folder });
+    files = await invoke<string[]>("list_codex_files", { root: path });
   } catch {
-    // 列舉失敗（資料夾已刪/移）：提示 + 復原下拉到目前的冊，
-    // 避免 select 已切到新冊、樹卻仍是舊冊的 stale 陷阱（從錯誤專案開檔）
-    await message("無法讀取此資料夾，可能已被移動或刪除。", { title: "開啟冊失敗", kind: "error" });
+    // 列舉失敗：資料夾已刪/移，或升級後此冊尚未重新授權（決策 50 白名單）。
+    // 統一提示重新開啟 + 復原下拉到目前的冊，避免 select 已切、樹仍 stale 的不一致。
+    await message(
+      "無法開啟此冊，可能已移動、刪除，或需重新授權；請用「開啟冊」重新選取。",
+      { title: "開啟冊失敗", kind: "error" },
+    );
     renderHeader();
     return;
   }
+  await applyCodex(path, files, false);
+}
+
+// 套用冊：建樹 → 設為當前 → 渲染（isNew 時加入清單並持久化）。
+// 不含列舉——列舉由兩入口各自取得（開冊走 pick_codex_root、切冊走 list_codex_files）。
+async function applyCodex(folder: string, files: string[], isNew: boolean): Promise<void> {
   if (isNew && !codexList.some((c) => c.path === folder)) {
     const name = folder.split(/[/\\]/).pop() || folder;
     codexList = [{ path: folder, name }, ...codexList]; // 新冊置頂

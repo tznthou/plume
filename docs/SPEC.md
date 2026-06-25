@@ -20,13 +20,13 @@ flowchart TB
         store["plugin-store"]
         pscope["plugin-persisted-scope"]
         opener["plugin-opener"]
-        cmd["自訂 command<br/>grant_scope / get_opened_urls / list_codex_files"]
+        cmd["自訂 command<br/>grant_scope / get_opened_urls / list_codex_files / pick_codex_root"]
     end
     editor -- "updateListener<br/>debounce 50ms" --> renderer --> preview
     main --> editor & file & recent & codex
     file -- IPC --> dialog & fs
     main -- "grant_scope<br/>get_opened_urls" --> cmd
-    codex -- "list_codex_files（唯讀列舉，不授權）" --> cmd
+    codex -- "pick_codex_root / list_codex_files<br/>唯讀列舉，不授權 fs scope" --> cmd
     cmd -- "fs_scope().allow_file()" --> fs
     recent -- IPC --> store
     preview -- IPC --> opener
@@ -43,8 +43,8 @@ flowchart TB
 | `src/preview.ts` | 接收 HTML 更新預覽 DOM、同步捲動（編輯→預覽單向比例式）、攔截 `a[href^="http"]` 點擊改走 opener、mermaid 圖表懶載入渲染（`securityLevel: 'strict'`，雙主題同步） | renderer 輸出, plugin-opener, mermaid（動態 import） |
 | `src/file.ts` | 開/存/另存/新增/匯出 HTML/外部路徑開檔（`openExternal`）；dirty 確認流程；維護 `DocState`（path/dirty）；更新視窗標題（`檔名 ●`）。內容唯一真相來源是 CM6 EditorState，**不另存字串副本** | plugin-dialog, plugin-fs, core(invoke) |
 | `src/recent.ts` | 最近 10 筆（去重、新→舊）；讀寫 store；失效項移除 | plugin-store, file |
-| `src/codex.ts` | 冊（Codex）：開資料夾為冊、Rust 唯讀列舉 `.md` 建巢狀樹、點檔走 `openExternal`、多冊切換、`codex.json` 持久化（只存根路徑，每次重列舉） | plugin-dialog, plugin-store, core(invoke), file |
-| `src-tauri/src/lib.rs` | Tauri builder：註冊五個官方 plugin + 三個自訂 command（`grant_scope` / `get_opened_urls` / `list_codex_files`）；`RunEvent::Opened` 檔案關聯處理 | tauri plugins, tauri-plugin-fs(FsExt) |
+| `src/codex.ts` | 冊（Codex）：開資料夾為冊、Rust 持有 dialog 核准冊 root、Rust 唯讀列舉 `.md` 建巢狀樹、點檔走 `openExternal`、多冊切換、`codex.json` 持久化（只存根路徑，每次重列舉） | plugin-dialog, plugin-store, core(invoke), file |
+| `src-tauri/src/lib.rs` | Tauri builder：註冊五個官方 plugin + 四個自訂 command（`grant_scope` / `get_opened_urls` / `list_codex_files` / `pick_codex_root`）；`RunEvent::Opened` 檔案關聯處理 | tauri plugins, tauri-plugin-fs(FsExt) |
 
 ## IPC 邊界與權限（capabilities）
 
@@ -63,7 +63,8 @@ flowchart TB
 | 關閉攔截／視窗標題 | `onCloseRequested()` / `destroy()` / `setTitle()` | `core:window:allow-close`, `core:window:allow-destroy`, `core:window:allow-set-title`（dirty 攔截確認後以 `destroy()` 關閉，避免 `close()` 重觸發事件） |
 | 外部路徑授權 fs scope | `invoke("grant_scope", { path })` | `allow-grant-scope`（自訂 command；驗證 .md/.markdown 副檔名後呼叫 `fs_scope().allow_file()`） |
 | 冷啟動檔案路徑取得 | `invoke("get_opened_urls")` | `allow-get-opened-urls`（自訂 command；回傳 OS 傳入的檔案路徑後清空暫存） |
-| 冊資料夾唯讀列舉 | `invoke("list_codex_files", { root })` | `allow-list-codex-files`（自訂 command；遞迴列 `.md` 路徑，**不開目錄 fs scope**、skip symlink、深度上限 16） |
+| 開冊資料夾選取與核准 | `invoke("pick_codex_root")` | `allow-pick-codex-root`（自訂 command；Rust 持有原生資料夾 dialog，canonical root 加入 approved-roots 白名單後回傳 `.md` 清單，**不開目錄 fs scope**） |
+| 冊資料夾唯讀列舉 | `invoke("list_codex_files", { root })` | `allow-list-codex-files`（自訂 command；僅接受 approved-roots 內的 canonical root，遞迴列 `.md` 路徑，**不開目錄 fs scope**、skip symlink、深度上限 16） |
 | 拖曳事件 | `getCurrentWebview().onDragDropEvent()` | 無額外權限（Tauri 2 core 內建） |
 | 暖啟動檔案事件 | `listen("file-open")` | 無額外權限（`core:event:default` 已含 listen） |
 | 原生選單列 | `@tauri-apps/api/menu`（JS 端建構） | `core:menu:default` |
@@ -72,7 +73,9 @@ flowchart TB
 
 拖曳與檔案關聯的路徑不來自 dialog，改以自訂 command `grant_scope` 呼叫 Rust 端 `FsExt::fs_scope().allow_file()` 動態加入 scope（僅接受 .md/.markdown 副檔名）。此設計維持 capabilities 不開全域路徑的安全原則。
 
-冊（Codex）的資料夾瀏覽以唯讀 command `list_codex_files` 遞迴列出 `.md` 路徑，純 Rust `std::fs::read_dir`（後端不受 Tauri fs scope 限制）、**完全不呼叫 fs scope 授權**——「能列目錄」與「能讀檔內容」分離，列舉不等於可讀。使用者點某個 `.md` 才沿用 `grant_scope` 單檔授權，per-file 承重牆零增量（決策 46 方案 B）。列舉端 skip symlink + 深度上限 16，避免回傳 scope 外捷徑路徑或迴圈。
+冊（Codex）的開冊入口是 `pick_codex_root`：Rust 端持有原生資料夾 dialog，使用者實際選取的 canonical root 才會加入 approved-roots 白名單，並持久化於 `app_local_data_dir/codex_roots.json` 私有檔（不經 store plugin、不開 fs scope，前端與 XSS 無法任意寫入）。`list_codex_files` 只接受已核准 root，拒絕任意前端傳入路徑，避免 XSS 直接枚舉任意資料夾檔名。
+
+冊列舉本身仍以純 Rust `std::fs::read_dir` 遞迴列出 `.md` 路徑（後端不受 Tauri fs scope 限制）、**完全不呼叫 fs scope 授權**——「能列目錄」與「能讀檔內容」分離，列舉不等於可讀。使用者點某個 `.md` 才沿用 `grant_scope` 單檔授權，per-file 承重牆零增量（決策 46 方案 B）。列舉端 skip symlink + 深度上限 16，避免回傳 scope 外捷徑路徑或迴圈。
 
 ## 渲染管線規格
 
@@ -130,6 +133,7 @@ interface RecentStore {
 | 輸出消毒 | 所有 `render()` 輸出必過 DOMPurify，預設白名單，此環節**不可被任何功能繞過**（含匯出 HTML）。Mermaid SVG 不經 DOMPurify 二次處理（foreignObject 衝突），安全靠 mermaid `securityLevel: "strict"`（內部 DOMPurify + HTML encode），post-render 用 `cloneNode(true)` 剝除 `addEventListener` 綁定 |
 | CSP | `tauri.conf.json` 設定：`default-src 'self'; img-src 'self' asset: https: data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com`；不允許遠端 script。style/font 僅白名單 Google Fonts 兩域（主題字體），script-src 仍鎖 'self' |
 | 權限最小化 | capabilities 僅宣告上表權限；fs scope 不開全域路徑 |
+| 冊列舉授權 | `pick_codex_root` 由 Rust 持有 dialog 並核准 canonical root；`list_codex_files` 只列 approved-roots 內的冊。白名單存於 app local data 私有檔，不經前端可寫 store 或 fs scope |
 | 連結外開 | 預覽區連結一律 opener 走系統瀏覽器，webview 不導航至外部 URL |
 
 ## 錯誤處理標準

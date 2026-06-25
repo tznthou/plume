@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pick-codex-root"
+description = "Enables the pick_codex_root command without any pre-configured scope."
+commands.allow = ["pick_codex_root"]
+
+[[permission]]
+identifier = "deny-pick-codex-root"
+description = "Denies the pick_codex_root command without any pre-configured scope."
+commands.deny = ["pick_codex_root"]

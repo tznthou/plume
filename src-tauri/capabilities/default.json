@@ -21,6 +21,7 @@
     },
     "allow-grant-scope",
     "allow-get-opened-urls",
-    "allow-list-codex-files"
+    "allow-list-codex-files",
+    "allow-pick-codex-root"
   ]
 }
