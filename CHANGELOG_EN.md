@@ -6,6 +6,16 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-06-26
+
+### Security
+
+- Codex folder listing now sits behind an authorization gate (closing an XSS arbitrary-path enumeration gap): a new Rust command `pick_codex_root` holds the native folder picker on the Rust side, so only a folder the user picked by hand is approved for listing — the frontend cannot inject arbitrary paths. Approved folders are written to a private file (not via the store plugin or fs scope, so XSS cannot tamper with it) and persist across restarts; `list_codex_files` now accepts only approved codices. The load-bearing wall is unchanged — listing still opens no fs scope, and clicking a file still goes through the existing per-file grant (`grant_scope`). Custom commands go from three to four
+
+### Changed
+
+- After upgrading to this version, switching to a Codex you opened in an older version asks you to pick it once more via "Open Codex Folder" (the new authorization mechanism needs you to re-confirm the folder); it is remembered from then on
+
 ## [0.9.0] - 2026-06-23
 
 ### Added
