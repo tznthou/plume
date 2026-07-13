@@ -282,3 +282,7 @@ void listen<string[]>("file-open", (event) => {
   const md = event.payload.find((p) => MD_EXT.test(p));
   if (md) openExternalWithRefresh(md);
 });
+
+// 停用 WebView 原生右鍵選單（含「重新載入」）：本 app 無自訂選單可替代，
+// 誤按「重新載入」會讓 webview 整頁重載，記憶體中的 CM6 內容/DocState 全部消失變空白。
+document.addEventListener("contextmenu", (e) => e.preventDefault());
