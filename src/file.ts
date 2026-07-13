@@ -268,18 +268,19 @@ export async function exportHtml(): Promise<void> {
 }
 
 export async function exportPdf(): Promise<void> {
+  document.getElementById("print-container")?.remove();
   const bodyHtml = await renderMathForExport(render(getContent()));
   const container = document.createElement("div");
   container.id = "print-container";
-  container.innerHTML = `<style>${EXPORT_TYPOGRAPHY_CSS}\n${hljsThemeCss}</style>${bodyHtml}`;
+  container.innerHTML =
+    `<style>@media print {\n${EXPORT_TYPOGRAPHY_CSS}\n${hljsThemeCss}\n}</style>${bodyHtml}`;
   document.body.appendChild(container);
-
-  const cleanup = (): void => {
+  try {
+    await invoke("plugin:webview|print");
+  } catch (e) {
     container.remove();
-    window.removeEventListener("afterprint", cleanup);
-  };
-  window.addEventListener("afterprint", cleanup);
-  window.print();
+    await message(`匯出 PDF 失敗：${String(e)}`, { title: "匯出失敗", kind: "error" });
+  }
 }
 
 let opening = false;

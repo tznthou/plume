@@ -1423,7 +1423,7 @@ html[data-theme="inkstone"] .shortcuts-card {
     padding: 0;
   }
 
-  body { background: #fff; color: #1f2328; }
+  body { background: #fff !important; color: #1f2328 !important; }
 
   #print-container h1, #print-container h2, #print-container h3,
   #print-container h4, #print-container h5, #print-container h6 {
