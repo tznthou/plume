@@ -6,6 +6,19 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-13
+
+### Added
+
+- PDF export: File > Export PDF (Cmd+P) produces vector PDF via the native macOS print dialog — text is selectable, searchable, and copyable, with zero external dependencies. Use the "PDF" dropdown at the bottom-left of the print dialog and choose "Save as PDF"
+
+### Technical details
+
+- Uses Tauri webview print IPC (`core:webview:allow-print`) instead of `window.print()` (unsupported in WKWebView)
+- Exported content passes through the existing DOMPurify pipeline; security boundary unchanged
+- KaTeX math exports as MathML (consistent with HTML export)
+- Mermaid diagrams export as source text in this release; rendering support planned for a future version
+
 ## [0.9.1] - 2026-06-26
 
 ### Security

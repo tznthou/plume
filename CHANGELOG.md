@@ -6,6 +6,19 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-07-13
+
+### 新增
+
+- PDF 匯出：File > Export PDF（Cmd+P）透過 macOS 原生列印面板輸出向量 PDF——文字可選取、可搜尋、可複製，零外部依賴。列印面板左下角「PDF」→「儲存為 PDF」即可存檔
+
+### 技術細節
+
+- 透過 Tauri webview print IPC（`core:webview:allow-print`）觸發原生列印，非 `window.print()`（WKWebView 不支援）
+- 匯出內容經既有 DOMPurify 管線，安全邊界不變
+- KaTeX 數學公式匯出為 MathML（與 HTML 匯出一致）
+- Mermaid 圖表在本版匯出為原始碼文字，後續版本改進
+
 ## [0.9.1] - 2026-06-26
 
 ### 安全
