@@ -1407,3 +1407,30 @@ html[data-theme="inkstone"] .shortcuts-card {
     transition: none !important;
   }
 }
+
+/* ===== 列印 (PDF 匯出) ===== */
+
+#print-container { display: none; }
+
+@media print {
+  html, body { height: auto; overflow: visible; }
+  #toolbar, #statusbar, #btn-exit-fullscreen, main { display: none !important; }
+  body::after { display: none; }
+
+  #print-container {
+    display: block !important;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  body { background: #fff; color: #1f2328; }
+
+  #print-container h1, #print-container h2, #print-container h3,
+  #print-container h4, #print-container h5, #print-container h6 {
+    break-after: avoid;
+  }
+  #print-container pre, #print-container blockquote,
+  #print-container table, #print-container img {
+    break-inside: avoid;
+  }
+}

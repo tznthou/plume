@@ -267,6 +267,21 @@ export async function exportHtml(): Promise<void> {
   }
 }
 
+export async function exportPdf(): Promise<void> {
+  const bodyHtml = await renderMathForExport(render(getContent()));
+  const container = document.createElement("div");
+  container.id = "print-container";
+  container.innerHTML = `<style>${EXPORT_TYPOGRAPHY_CSS}\n${hljsThemeCss}</style>${bodyHtml}`;
+  document.body.appendChild(container);
+
+  const cleanup = (): void => {
+    container.remove();
+    window.removeEventListener("afterprint", cleanup);
+  };
+  window.addEventListener("afterprint", cleanup);
+  window.print();
+}
+
 let opening = false;
 
 export async function openExternal(path: string, kind: LoadKind = "open"): Promise<void> {

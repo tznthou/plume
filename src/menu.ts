@@ -14,6 +14,7 @@ export interface MenuCallbacks {
   onSave: () => void;
   onSaveAs: () => void;
   onExport: () => void;
+  onExportPdf: () => void;
   onSetMode: (mode: Mode) => void;
   onToggleFocus: (checked: boolean) => void;
   onToggleTypewriter: (checked: boolean) => void;
@@ -91,6 +92,7 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
       { text: "Save As…", accelerator: "CmdOrCtrl+Shift+S", action: () => cb.onSaveAs() },
       { item: "Separator" },
       { text: "Export HTML…", action: () => cb.onExport() },
+      { text: "Export PDF…", accelerator: "CmdOrCtrl+P", action: () => cb.onExportPdf() },
     ],
   });
 
