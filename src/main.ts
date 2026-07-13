@@ -11,6 +11,7 @@ import { render } from "./renderer";
 import {
   copyHtml,
   exportHtml,
+  exportPdf,
   initFileModule,
   markDirty,
   newFile,
@@ -105,6 +106,7 @@ void Promise.all([initTheme(), initReadingPrefs()]).then(() => {
     onSave: doSave,
     onSaveAs: doSaveAs,
     onExport: () => void exportHtml(),
+    onExportPdf: () => void exportPdf(),
     onSetMode: setMode,
     onToggleFocus: (checked) => {
       reconfigureFocus(checked ? focusExtension() : []);

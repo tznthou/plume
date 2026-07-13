@@ -267,6 +267,28 @@ export async function exportHtml(): Promise<void> {
   }
 }
 
+let printing = false;
+
+export async function exportPdf(): Promise<void> {
+  if (printing) return;
+  printing = true;
+  try {
+    document.getElementById("print-container")?.remove();
+    const bodyHtml = await renderMathForExport(render(getContent()));
+    const container = document.createElement("div");
+    container.id = "print-container";
+    container.innerHTML =
+      `<style>@media print {\n${EXPORT_TYPOGRAPHY_CSS}\n${hljsThemeCss}\n}</style>${bodyHtml}`;
+    document.body.appendChild(container);
+    await invoke("plugin:webview|print");
+  } catch (e) {
+    document.getElementById("print-container")?.remove();
+    await message(`匯出 PDF 失敗：${String(e)}`, { title: "匯出失敗", kind: "error" });
+  } finally {
+    printing = false;
+  }
+}
+
 let opening = false;
 
 export async function openExternal(path: string, kind: LoadKind = "open"): Promise<void> {
