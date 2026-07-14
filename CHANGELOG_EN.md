@@ -6,6 +6,18 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-14
+
+### Added
+
+- Multi-tab editing: open multiple Markdown files simultaneously with tab switching, closing, dirty-state indicators (dot), and scroll-position restoration. Window close confirms each unsaved tab individually
+- Export dropdown: the export button is now a dropdown menu with separate "Export HTML" and "Export PDF" options
+- Context menu prevention: disables the native webview context menu to prevent accidental "Reload" which would destroy all in-memory editor content
+
+### Acknowledgements
+
+- Thanks to [@is90057](https://github.com/is90057) for contributing PR #15 (tab component + export dropdown). PDF export retains the v0.10.0 native print approach (vector PDF, selectable text); html2pdf.js dependency removed
+
 ## [0.10.0] - 2026-07-13
 
 ### Added
