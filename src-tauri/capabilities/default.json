@@ -5,6 +5,7 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:webview:allow-print",
     "core:window:allow-close",
     "core:window:allow-destroy",
     "core:window:allow-set-title",
@@ -19,7 +20,6 @@
       "identifier": "opener:allow-open-url",
       "allow": [{ "url": "https://**" }, { "url": "http://**" }]
     },
-    "core:webview:allow-print",
     "allow-grant-scope",
     "allow-get-opened-urls",
     "allow-list-codex-files",

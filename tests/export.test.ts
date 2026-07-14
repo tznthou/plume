@@ -16,6 +16,7 @@ const editorMocks = vi.hoisted(() => ({
   getContent: vi.fn(),
   setContent: vi.fn(),
   onChange: vi.fn(),
+  getScrollDOM: vi.fn().mockReturnValue({ scrollTop: 0 }),
 }));
 const recentMocks = vi.hoisted(() => ({
   getRecent: vi.fn(),
@@ -120,4 +121,6 @@ describe("export", () => {
     expect(html).not.toContain("</title><script>"); // 未轉義會破出 title 注入 script
     expect(html).toContain("&lt;/title&gt;&lt;script&gt;"); // 轉義後為純文字
   });
+
 });
+

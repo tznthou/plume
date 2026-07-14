@@ -7,42 +7,63 @@ import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import DOMPurify from "dompurify";
 import hljsThemeCss from "highlight.js/styles/github.css?raw";
-import { getContent, setContent } from "./editor";
+import { getContent, setContent, getScrollDOM } from "./editor";
 import { escapeHtml, render } from "./renderer";
 import { addRecent, removeRecent } from "./recent";
 
-interface DocState {
-  path: string | null; // null = 未命名新文件
-  dirty: boolean; // 內容是否與磁碟不同步
+export interface Tab {
+  id: string;
+  path: string | null;
+  dirty: boolean;
+  content: string;
+  scrollPos: number;
 }
 
 const MD_FILTERS = [{ name: "Markdown", extensions: ["md", "markdown"] }];
 
-const doc: DocState = { path: null, dirty: false };
-
-// 程式載入內容（開檔/新增）時抑制 markDirty——setContent 會同步觸發
-// CM6 docChanged → onChange → markDirty，但那不是使用者編輯
+// Initialize with a single blank tab
+let tabs: Tab[] = [createTab()];
+let activeTabId: string = tabs[0].id;
 let suppressDirty = false;
 
-export function getDocState(): Readonly<DocState> {
-  return doc;
+function createTab(path: string | null = null, content: string = "", dirty: boolean = false): Tab {
+  return {
+    id: Math.random().toString(36).substring(2, 9),
+    path,
+    dirty,
+    content,
+    scrollPos: 0,
+  };
 }
 
-function fileName(): string {
-  if (doc.path === null) return "未命名";
-  return doc.path.split(/[/\\]/).pop() ?? doc.path; // Windows 路徑為反斜線
+export function getTabs(): Tab[] {
+  return tabs;
 }
 
-// dirty 變化匯流點是 updateTitle（markDirty/newFile/loadPath/writeTo 都經過），
-// 狀態列訂閱於此，不另開通知路徑
+export function getActiveTabId(): string {
+  return activeTabId;
+}
+
+export function getActiveTab(): Tab {
+  return tabs.find((t) => t.id === activeTabId) ?? tabs[0];
+}
+
+// dirty 變化與 tab 改變通知
 let dirtyListener: ((dirty: boolean) => void) | null = null;
+let tabsChangeListener: (() => void) | null = null;
 
 export function onDirtyChange(cb: (dirty: boolean) => void): void {
   dirtyListener = cb;
 }
 
-// 開檔/新檔通知（main 接到後讓預覽下次渲染回頂）。沿用 onDirtyChange 的 callback 模式，
-// 不讓 file 狀態層直接相依 preview 視圖層。
+export function onTabsChange(cb: () => void): void {
+  tabsChangeListener = cb;
+}
+
+function notifyTabsChange(): void {
+  tabsChangeListener?.();
+}
+
 export type LoadKind = "new" | "open" | "codex";
 let loadListener: ((kind: LoadKind) => void) | null = null;
 
@@ -50,15 +71,39 @@ export function onLoad(cb: (kind: LoadKind) => void): void {
   loadListener = cb;
 }
 
+export function getDocState(): Readonly<{ path: string | null; dirty: boolean }> {
+  const active = getActiveTab();
+  return {
+    path: active.path,
+    dirty: active.dirty,
+  };
+}
+
+function fileName(): string {
+  const active = getActiveTab();
+  if (active.path === null) return "未命名";
+  return active.path.split(/[/\\]/).pop() ?? active.path;
+}
+
+function fileNameForTab(tab: Tab): string {
+  if (tab.path === null) return "未命名";
+  return tab.path.split(/[/\\]/).pop() ?? tab.path;
+}
+
 async function updateTitle(): Promise<void> {
-  dirtyListener?.(doc.dirty);
-  await getCurrentWindow().setTitle(`${fileName()}${doc.dirty ? " ●" : ""}`);
+  const active = getActiveTab();
+  dirtyListener?.(active.dirty);
+  const name = fileName().replace(/\.(md|markdown)$/i, "");
+  document.title = name;
+  await getCurrentWindow().setTitle(`${fileName()}${active.dirty ? " ●" : ""}`);
 }
 
 export function markDirty(): void {
-  if (suppressDirty || doc.dirty) return;
-  doc.dirty = true;
+  const active = getActiveTab();
+  if (suppressDirty || active.dirty) return;
+  active.dirty = true;
   void updateTitle();
+  notifyTabsChange();
 }
 
 function loadContent(text: string): void {
@@ -70,16 +115,132 @@ function loadContent(text: string): void {
   }
 }
 
-// dirty 確認流程，新增/開啟/關閉共用。回傳 true = 可以繼續（已存或使用者同意放棄）。
-// plugin-dialog 無三鈕 API，以兩段式提供「儲存／放棄／取消」三條路徑。
-async function confirmLoseChanges(): Promise<boolean> {
-  if (!doc.dirty) return true;
-  const wantSave = await ask(`「${fileName()}」有未儲存的變更，要儲存嗎？`, {
+// Select a tab and restore content and scroll position
+// Select a tab and restore content and scroll position
+export async function selectTab(id: string): Promise<void> {
+  if (id === activeTabId) return;
+  const current = getActiveTab();
+  if (current) {
+    current.content = getContent ? (getContent() || "") : "";
+    const scrollDom = getScrollDOM ? getScrollDOM() : null;
+    current.scrollPos = scrollDom ? scrollDom.scrollTop : 0;
+  }
+
+  activeTabId = id;
+  const target = getActiveTab();
+  if (target) {
+    loadContent(target.content);
+    requestAnimationFrame(() => {
+      const scrollDom = getScrollDOM ? getScrollDOM() : null;
+      if (scrollDom) scrollDom.scrollTop = target.scrollPos;
+    });
+    await updateTitle();
+  }
+  notifyTabsChange();
+}
+
+// Close a tab
+export async function closeTab(id: string): Promise<boolean> {
+  const index = tabs.findIndex((t) => t.id === id);
+  if (index === -1) return false;
+
+  const tabToClose = tabs[index];
+  if (id === activeTabId) {
+    tabToClose.content = getContent ? (getContent() || "") : "";
+    const scrollDom = getScrollDOM ? getScrollDOM() : null;
+    tabToClose.scrollPos = scrollDom ? scrollDom.scrollTop : 0;
+  }
+
+  if (tabToClose.dirty) {
+    const wantSave = await ask(`「${fileNameForTab(tabToClose)}」有未儲存的變更，要儲存嗎？`, {
+      title: "未儲存的變更",
+      okLabel: "儲存",
+      cancelLabel: "不儲存",
+    });
+    if (wantSave) {
+      const ok = await saveTab(tabToClose);
+      if (!ok) return false;
+    } else {
+      const confirmAbandon = await ask("確定放棄未儲存的變更？", {
+        title: "放棄變更",
+        kind: "warning",
+        okLabel: "放棄變更",
+        cancelLabel: "取消",
+      });
+      if (!confirmAbandon) return false;
+    }
+  }
+
+  tabs.splice(index, 1);
+
+  if (tabs.length === 0) {
+    const newTab = createTab();
+    tabs.push(newTab);
+    activeTabId = newTab.id;
+    loadContent("");
+    await updateTitle();
+    loadListener?.("new");
+  } else if (id === activeTabId) {
+    const nextActiveIndex = Math.min(index, tabs.length - 1);
+    const targetTab = tabs[nextActiveIndex];
+    activeTabId = targetTab.id;
+    loadContent(targetTab.content);
+    requestAnimationFrame(() => {
+      const scrollDom = getScrollDOM ? getScrollDOM() : null;
+      if (scrollDom) scrollDom.scrollTop = targetTab.scrollPos;
+    });
+    await updateTitle();
+    loadListener?.("open");
+  }
+
+  notifyTabsChange();
+  return true;
+}
+
+async function saveTab(tab: Tab): Promise<boolean> {
+  if (tab.id === activeTabId) {
+    tab.content = getContent ? (getContent() || "") : "";
+  }
+  if (tab.path === null) {
+    const target = await save({
+      filters: MD_FILTERS,
+      defaultPath: tab.path ?? "未命名.md",
+    });
+    if (target === null) return false;
+    const ok = await writeToPath(tab, target);
+    if (ok) await addRecent(target);
+    return ok;
+  } else {
+    return writeToPath(tab, tab.path);
+  }
+}
+
+async function writeToPath(tab: Tab, path: string): Promise<boolean> {
+  try {
+    const contentToSave = tab.id === activeTabId ? (getContent ? (getContent() || "") : "") : tab.content;
+    await writeTextFile(path, contentToSave);
+    tab.path = path;
+    tab.dirty = false;
+    if (tab.id === activeTabId) {
+      await updateTitle();
+      dirtyListener?.(false);
+    }
+    notifyTabsChange();
+    return true;
+  } catch (e) {
+    await message(`儲存失敗：${String(e)}`, { title: "儲存失敗", kind: "error" });
+    return false;
+  }
+}
+
+async function confirmLoseChangesForTab(tab: Tab): Promise<boolean> {
+  if (!tab.dirty) return true;
+  const wantSave = await ask(`「${fileNameForTab(tab)}」有未儲存的變更，要儲存嗎？`, {
     title: "未儲存的變更",
     okLabel: "儲存",
     cancelLabel: "不儲存",
   });
-  if (wantSave) return saveFile(); // 儲存失敗或另存被取消 → false，不繼續
+  if (wantSave) return saveTab(tab);
   return ask("確定放棄未儲存的變更？", {
     title: "放棄變更",
     kind: "warning",
@@ -89,72 +250,94 @@ async function confirmLoseChanges(): Promise<boolean> {
 }
 
 export async function newFile(): Promise<void> {
-  if (!(await confirmLoseChanges())) return;
+  const active = getActiveTab();
+  if (active) {
+    active.content = getContent ? (getContent() || "") : "";
+    const scrollDom = getScrollDOM ? getScrollDOM() : null;
+    active.scrollPos = scrollDom ? scrollDom.scrollTop : 0;
+  }
+
+  const newTab = createTab();
+  tabs.push(newTab);
+  activeTabId = newTab.id;
+
   loadContent("");
-  doc.path = null;
-  doc.dirty = false;
   await updateTitle();
   loadListener?.("new");
+  notifyTabsChange();
 }
 
 export async function openFile(): Promise<void> {
-  if (!(await confirmLoseChanges())) return;
   const selected = await open({ multiple: false, filters: MD_FILTERS });
   if (selected === null) return;
-  await loadPath(selected);
+  await openFileInTab(selected);
 }
 
-// 最近檔案以路徑直接開啟，不走 dialog——fs scope 來自當次 dialog 授權，
-// 或 persisted-scope 跨 session 恢復（Task 6 驗收點：重啟後仍可開）
 export async function openRecent(path: string): Promise<void> {
-  if (!(await confirmLoseChanges())) return;
-  await loadPath(path);
+  await openFileInTab(path);
 }
 
-async function loadPath(path: string, kind: LoadKind = "open"): Promise<void> {
+export async function openFileInTab(path: string, kind: LoadKind = "open"): Promise<void> {
+  const existingTab = tabs.find((t) => t.path === path);
+  if (existingTab) {
+    await selectTab(existingTab.id);
+    return;
+  }
+
   try {
     const content = await readTextFile(path);
-    loadContent(content);
-    doc.path = path;
-    doc.dirty = false;
-    await updateTitle();
-    await addRecent(path);
-    loadListener?.(kind);
+    const current = getActiveTab();
+    const currentContent = getContent ? (getContent() || "") : "";
+
+    if (current && current.path === null && !current.dirty && current.content === "" && currentContent === "") {
+      // Reuse current tab
+      current.path = path;
+      current.content = content;
+      current.dirty = false;
+      loadContent(content);
+      await updateTitle();
+      await addRecent(path);
+      loadListener?.(kind);
+    } else {
+      // Create new tab
+      if (current) {
+        current.content = currentContent;
+        const scrollDom = getScrollDOM ? getScrollDOM() : null;
+        current.scrollPos = scrollDom ? scrollDom.scrollTop : 0;
+      }
+      const newTab = createTab(path, content, false);
+      tabs.push(newTab);
+      activeTabId = newTab.id;
+      loadContent(content);
+      await updateTitle();
+      await addRecent(path);
+      loadListener?.(kind);
+    }
+    notifyTabsChange();
   } catch (e) {
-    // SPEC 錯誤處理：讀檔失敗不載入、不改變現有編輯內容，非阻斷提示＋自最近清單移除
     await message(`無法開啟檔案：${String(e)}`, { title: "開啟失敗", kind: "error" });
     await removeRecent(path);
   }
 }
 
 export async function saveFile(): Promise<boolean> {
-  if (doc.path === null) return saveAs();
-  return writeTo(doc.path);
+  const active = getActiveTab();
+  return saveTab(active);
 }
 
 export async function saveAs(): Promise<boolean> {
+  const active = getActiveTab();
   const target = await save({
     filters: MD_FILTERS,
-    defaultPath: doc.path ?? "未命名.md",
+    defaultPath: active.path ?? "未命名.md",
   });
   if (target === null) return false;
-  const ok = await writeTo(target);
-  if (ok) await addRecent(target); // PLAN：open/saveAs 成功後記錄（saveFile 既有路徑不重複記）
-  return ok;
-}
-
-async function writeTo(path: string): Promise<boolean> {
-  try {
-    await writeTextFile(path, getContent());
-    doc.path = path;
-    doc.dirty = false;
-    await updateTitle();
-    return true;
-  } catch (e) {
-    // SPEC 錯誤處理：寫檔失敗保留編輯內容與 dirty 狀態，阻斷 dialog 顯示原因
-    await message(`儲存失敗：${String(e)}`, { title: "儲存失敗", kind: "error" });
-    return false;
+  const ok = await writeToPath(active, target);
+  if (ok) {
+    await addRecent(target);
+    notifyTabsChange();
   }
+  return ok;
 }
 
 // ----- 匯出 HTML（Task 7）-----
@@ -295,9 +478,8 @@ export async function openExternal(path: string, kind: LoadKind = "open"): Promi
   if (opening) return;
   opening = true;
   try {
-    if (!(await confirmLoseChanges())) return;
     const resolved = await invoke<string>("grant_scope", { path });
-    await loadPath(resolved, kind);
+    await openFileInTab(resolved, kind);
   } catch (e) {
     await message(`無法開啟檔案：${String(e)}`, {
       title: "開啟失敗",
@@ -311,11 +493,20 @@ export async function openExternal(path: string, kind: LoadKind = "open"): Promi
 export async function initFileModule(): Promise<void> {
   const win = getCurrentWindow();
   await win.onCloseRequested(async (event) => {
-    if (!doc.dirty) return;
-    event.preventDefault();
-    if (await confirmLoseChanges()) {
-      await win.destroy(); // close() 會再觸發本事件，確認後直接 destroy
+    const active = getActiveTab();
+    if (active) {
+      active.content = getContent();
     }
+    const dirtyTabs = tabs.filter((t) => t.dirty);
+    if (dirtyTabs.length === 0) return;
+    event.preventDefault();
+    for (const tab of dirtyTabs) {
+      await selectTab(tab.id);
+      if (!(await confirmLoseChangesForTab(tab))) {
+        return;
+      }
+    }
+    await win.destroy();
   });
   await updateTitle();
 }

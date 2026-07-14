@@ -203,6 +203,72 @@ html[data-theme-choice="auto"][data-theme="inkstone"] #btn-theme .theme-name::be
   content: "自動";
 }
 
+/* ===== 匯出下拉選單 ===== */
+#export-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+#export-dropdown .dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  min-width: 110px;
+}
+
+html[data-theme="vol-de-nuit"] #export-dropdown .dropdown-menu {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(230, 233, 240, 0.05);
+}
+
+#export-dropdown .dropdown-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  border: none !important;
+  background: transparent !important;
+  border-radius: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+#export-dropdown .dropdown-menu button:first-child {
+  border-radius: 5px 5px 0 0;
+}
+
+#export-dropdown .dropdown-menu button:last-child {
+  border-radius: 0 0 5px 5px;
+}
+
+#export-dropdown .dropdown-menu button:hover {
+  background: var(--bg-inset) !important;
+  color: var(--accent) !important;
+}
+
+html[data-theme="inkstone"] #export-dropdown .dropdown-menu button {
+  color: var(--fg-muted);
+}
+
+html[data-theme="inkstone"] #export-dropdown .dropdown-menu button:hover {
+  color: var(--fg) !important;
+  background: rgba(31, 29, 26, 0.05) !important;
+}
+
+#export-dropdown.open .dropdown-menu {
+  display: block;
+}
+
 #recent-list {
   margin-left: auto;
   max-width: 220px;
@@ -218,6 +284,147 @@ html[data-theme-choice="auto"][data-theme="inkstone"] #btn-theme .theme-name::be
 html[data-theme="inkstone"] #recent-list {
   background: transparent;
   border-color: transparent;
+}
+
+/* ===== Tabs Bar ===== */
+
+#tabs-container {
+  display: flex;
+  align-items: center;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  padding: 4px 12px 0 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Hide scrollbar for clean UI */
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+#tabs-list {
+  display: flex;
+  gap: 4px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  color: var(--fg-muted);
+  background: var(--bg-inset);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  position: relative;
+  bottom: -1px; /* Overlap the bottom border when active */
+  z-index: 1;
+}
+
+.tab:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--bg-panel) 80%, transparent);
+}
+
+.tab.active {
+  color: var(--accent);
+  background: var(--bg-panel);
+  border-color: var(--line);
+  border-bottom-color: var(--bg-panel); /* Blend in with editor background */
+  font-weight: 500;
+  z-index: 2;
+}
+
+/* Close button and dirty status */
+.tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 9px;
+  color: var(--fg-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s, color 0.2s;
+}
+
+.tab:hover .tab-close,
+.tab.active .tab-close {
+  opacity: 1;
+}
+
+.tab-close:hover {
+  background: var(--line);
+  color: var(--fg);
+}
+
+.tab-status {
+  display: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.tab.dirty:not(:hover) .tab-status {
+  display: inline-block;
+}
+
+.tab.dirty:hover .tab-status {
+  display: none;
+}
+
+.tab.dirty:not(:hover) .tab-close {
+  display: none;
+}
+
+/* 05: Inkstone Specific Styles for Tabs */
+html[data-theme="inkstone"] #tabs-container {
+  background: var(--bg-bar);
+  border-bottom: none;
+  box-shadow: 0 4px 10px -8px rgba(31, 29, 26, 0.15);
+  z-index: 3;
+}
+
+html[data-theme="inkstone"] .tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  bottom: 0;
+  color: var(--fg-muted);
+  padding: 8px 12px;
+}
+
+html[data-theme="inkstone"] .tab:hover {
+  color: var(--fg);
+  background: rgba(31, 29, 26, 0.03);
+}
+
+html[data-theme="inkstone"] .tab.active {
+  color: var(--fg);
+  border-bottom-color: var(--fg-strong);
+  background: transparent;
+  font-weight: 600;
+}
+
+html[data-theme="inkstone"] .tab-status {
+  background: var(--cinnabar);
+}
+
+html[data-theme="inkstone"] .tab-close:hover {
+  background: rgba(31, 29, 26, 0.08);
 }
 
 /* ===== Main：編輯/預覽左右各半 ===== */
@@ -1414,7 +1621,7 @@ html[data-theme="inkstone"] .shortcuts-card {
 
 @media print {
   html, body { height: auto; overflow: visible; }
-  #toolbar, #statusbar, #btn-exit-fullscreen, main { display: none !important; }
+  #toolbar, #statusbar, #tabs-container, #btn-exit-fullscreen, main { display: none !important; }
   body::after { display: none; }
 
   #print-container {

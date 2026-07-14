@@ -22,6 +22,11 @@ import {
   openRecent,
   saveAs,
   saveFile,
+  getTabs,
+  getActiveTabId,
+  selectTab,
+  closeTab,
+  onTabsChange,
 } from "./file";
 import { getRecent } from "./recent";
 import { initCodex, openCodexFolder, restoreCodices } from "./codex";
@@ -188,7 +193,26 @@ const doSaveAs = withRecentRefresh(saveAs);
 document.querySelector("#btn-new")!.addEventListener("click", doNew);
 document.querySelector("#btn-open")!.addEventListener("click", doOpen);
 document.querySelector("#btn-save")!.addEventListener("click", doSave);
-document.querySelector("#btn-export")!.addEventListener("click", () => void exportHtml());
+const exportDropdown = document.querySelector("#export-dropdown")!;
+const btnExport = document.querySelector("#btn-export")!;
+btnExport.addEventListener("click", (e) => {
+  e.stopPropagation();
+  const isOpen = exportDropdown.classList.contains("open");
+  if (isOpen) {
+    exportDropdown.classList.remove("open");
+    btnExport.setAttribute("aria-expanded", "false");
+  } else {
+    exportDropdown.classList.add("open");
+    btnExport.setAttribute("aria-expanded", "true");
+  }
+});
+document.addEventListener("click", () => {
+  exportDropdown.classList.remove("open");
+  btnExport.setAttribute("aria-expanded", "false");
+});
+
+document.querySelector("#btn-export-html")!.addEventListener("click", () => void exportHtml());
+document.querySelector("#btn-export-pdf")!.addEventListener("click", () => void exportPdf());
 document.querySelector("#btn-theme")!.addEventListener("click", () => {
   void toggleTheme().then((choice) => {
     update(render(getContent()));
@@ -219,9 +243,62 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
+// ----- 分頁 UI 渲染與事件處理 -----
+
+const tabsListEl = document.querySelector<HTMLElement>("#tabs-list")!;
+
+function renderTabs(): void {
+  const allTabs = getTabs();
+  const activeId = getActiveTabId();
+
+  tabsListEl.innerHTML = "";
+
+  for (const tab of allTabs) {
+    const tabEl = document.createElement("div");
+    tabEl.className = "tab";
+    if (tab.id === activeId) {
+      tabEl.classList.add("active");
+    }
+    if (tab.dirty) {
+      tabEl.classList.add("dirty");
+    }
+
+    const titleEl = document.createElement("span");
+    titleEl.className = "tab-title";
+    const name = tab.path ? (tab.path.split(/[/\\]/).pop() ?? tab.path) : "未命名";
+    titleEl.textContent = name;
+    tabEl.appendChild(titleEl);
+
+    // 狀態點（未儲存時顯示）
+    const statusEl = document.createElement("span");
+    statusEl.className = "tab-status";
+    tabEl.appendChild(statusEl);
+
+    // 關閉按鈕
+    const closeEl = document.createElement("span");
+    closeEl.className = "tab-close";
+    closeEl.textContent = "✕";
+    closeEl.title = "關閉分頁";
+    closeEl.addEventListener("click", (e) => {
+      e.stopPropagation(); // 阻止點擊關閉按鈕觸發分頁切換
+      void closeTab(tab.id);
+    });
+    tabEl.appendChild(closeEl);
+
+    tabEl.addEventListener("click", () => {
+      void selectTab(tab.id);
+    });
+
+    tabsListEl.appendChild(tabEl);
+  }
+}
+
+onTabsChange(renderTabs);
+
 void initFileModule(); // onCloseRequested dirty 攔截 + 初始視窗標題
 void refreshRecentUI(); // 啟動時載入既有清單
 void restoreCodices(); // 啟動載入冊清單填下拉（不自動列舉，使用者選冊才開）
+renderTabs(); // 初始渲染分頁列
 
 // ----- 拖曳開檔（drag & drop .md onto window） -----
 
@@ -263,3 +340,7 @@ void listen<string[]>("file-open", (event) => {
   const md = event.payload.find((p) => MD_EXT.test(p));
   if (md) openExternalWithRefresh(md);
 });
+
+// 停用 WebView 原生右鍵選單（含「重新載入」）：本 app 無自訂選單可替代，
+// 誤按「重新載入」會讓 webview 整頁重載，記憶體中的 CM6 內容/DocState 全部消失變空白。
+document.addEventListener("contextmenu", (e) => e.preventDefault());

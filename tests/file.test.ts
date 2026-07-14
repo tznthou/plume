@@ -16,6 +16,7 @@ const editorMocks = vi.hoisted(() => ({
   getContent: vi.fn(),
   setContent: vi.fn(),
   onChange: vi.fn(),
+  getScrollDOM: vi.fn().mockReturnValue({ scrollTop: 0 }),
 }));
 const windowMocks = vi.hoisted(() => ({
   setTitle: vi.fn(),
@@ -47,6 +48,7 @@ async function loadFileModule() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  editorMocks.getContent.mockReturnValue("");
 });
 
 describe("file", () => {
@@ -143,23 +145,21 @@ describe("file", () => {
     expect(recentMocks.addRecent).toHaveBeenCalledWith("/real/dragged.md");
   });
 
-  it("test_file_openExternal_dirty_confirmsFirst", async () => {
-    coreMocks.invoke.mockResolvedValue("/tmp/new.md");
-    fsMocks.readTextFile.mockResolvedValue("原始");
+  it("test_file_openExternal_dirty_createsNewTabWithoutPrompting", async () => {
+    coreMocks.invoke.mockResolvedValue("/real/new.md");
+    fsMocks.readTextFile.mockResolvedValueOnce("原始").mockResolvedValueOnce("# 新檔");
     dialogMocks.open.mockResolvedValue("/tmp/a.md");
 
     const file = await loadFileModule();
     await file.openFile();
     file.markDirty();
 
-    // 使用者取消儲存又取消放棄 → 不繼續開檔
-    dialogMocks.ask.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
-    fsMocks.readTextFile.mockResolvedValue("# 新檔");
-
     await file.openExternal("/tmp/new.md");
 
-    expect(dialogMocks.ask).toHaveBeenCalled();
-    expect(file.getDocState().path).toBe("/tmp/a.md");
+    // In a multi-tab system, we do NOT prompt to discard changes since we open in a new tab
+    expect(dialogMocks.ask).not.toHaveBeenCalled();
+    expect(file.getTabs().length).toBe(2);
+    expect(file.getDocState()).toEqual({ path: "/real/new.md", dirty: false });
   });
 
   it("test_file_openExternal_scopeFails_showsError", async () => {
