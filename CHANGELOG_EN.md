@@ -6,6 +6,25 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-18
+
+### Added
+
+- Multi-language support (i18n): language selector with instant UI switching and persisted preference across sessions. Toolbar, native menus, dialogs, keyboard shortcuts overlay, and status bar are fully localized
+- Locale pack system: Rust backend loads JSON locale files from `app_local_data_dir/locales/`, supporting user-customizable translations. Ships with Traditional Chinese and English
+- Local image preview: relative image paths in Markdown render in the preview pane via Tauri's asset protocol for secure local file access
+- Codex deletion: delete button in the codex sidebar removes a codex from the menu (does not delete the actual folder); switching to a missing codex prompts removal
+
+### Security
+
+- Asset protocol enabled without global scope — only dynamically authorized paths are accessible via asset URLs
+- `grant_scope` remains single-file authorization, not directory-wide
+- Three new custom commands: `load_locales`, `open_locales_dir`, `delete_codex_folder` (seven total)
+
+### Acknowledgements
+
+- Thanks to [@is90057](https://github.com/is90057) for contributing PR #16 (i18n architecture, language selector, localized dialogs, local image preview, codex import/delete)
+
 ## [0.11.0] - 2026-07-14
 
 ### Added

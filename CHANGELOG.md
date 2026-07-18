@@ -6,6 +6,25 @@
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-18
+
+### 新增
+
+- 多語系支援（i18n）：語言選擇器即時切換介面語言，偏好自動保存跨 session 記憶。工具列、原生選單、對話框、快捷鍵說明、狀態列全面在地化
+- 語言包機制：Rust 端從 `app_local_data_dir/locales/` 載入 JSON 語言包，支援使用者自訂翻譯。內建正體中文與英文兩組完整語系
+- 本地圖片預覽：Markdown 中的相對路徑圖片在預覽區即時顯示，透過 Tauri asset protocol 安全載入本地檔案
+- 冊刪除功能：冊側邊欄新增刪除按鈕，從選單移除冊（不刪除實際資料夾）；切換冊時若資料夾已不存在，提示使用者移除
+
+### 安全
+
+- asset protocol 啟用但不開全域 scope，僅對已動態授權的路徑允許 asset URL 存取
+- `grant_scope` 維持單檔授權，不擴及父目錄
+- 自訂 command 新增 `load_locales`、`open_locales_dir`、`delete_codex_folder` 三個（共七個）
+
+### 致謝
+
+- 感謝 [@is90057](https://github.com/is90057) 貢獻 PR #16（i18n 架構、語言選擇器、在地化對話框、本地圖片預覽、冊匯入/刪除）
+
 ## [0.11.0] - 2026-07-14
 
 ### 新增
