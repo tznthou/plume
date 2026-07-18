@@ -9,7 +9,6 @@ fn main() {
                     "pick_codex_root",
                     "load_locales",
                     "open_locales_dir",
-                    "import_codex_folder",
                     "delete_codex_folder",
                 ]),
         ),

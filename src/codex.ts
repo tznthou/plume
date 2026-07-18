@@ -129,7 +129,7 @@ export async function openCodexFolder(): Promise<void> {
 export async function importCodexFolder(): Promise<void> {
   let pick: { root: string; files: string[] } | null;
   try {
-    pick = await invoke<{ root: string; files: string[] } | null>("import_codex_folder");
+    pick = await invoke<{ root: string; files: string[] } | null>("pick_codex_root");
   } catch {
     await message(t("dialogs.importCodexErrorMessage"), { title: t("dialogs.importCodexErrorTitle"), kind: "error" });
     return;
@@ -159,6 +159,8 @@ export async function deleteCurrentCodex(): Promise<void> {
     await invoke<void>("delete_codex_folder", { path });
   } catch (err) {
     console.error("Failed to delete codex folder from backend", err);
+    await message(t("dialogs.openCodexErrorMessage"), { title: t("dialogs.openCodexErrorTitle"), kind: "error" });
+    return;
   }
 
   // Remove from the frontend list
@@ -186,8 +188,7 @@ export async function switchCodex(path: string): Promise<void> {
         t("dialogs.switchCodexErrorMessage"),
         { title: t("dialogs.switchCodexErrorTitle"), kind: "error" },
       );
-    } else {
-      // 不存在（或已搬移、刪除）
+    } else if (errMsg.includes("entity not found") || errMsg.includes("No such file") || errMsg.includes("not found")) {
       const wantDelete = await ask(
         t("dialogs.deleteNonExistentCodexMessage", { name: codex.name }),
         {
@@ -206,6 +207,11 @@ export async function switchCodex(path: string): Promise<void> {
           refreshTree();
         }
       }
+    } else {
+      await message(
+        t("dialogs.switchCodexErrorMessage"),
+        { title: t("dialogs.switchCodexErrorTitle"), kind: "error" },
+      );
     }
     renderHeader();
     return;

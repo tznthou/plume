@@ -97,7 +97,7 @@ describe("codex store", () => {
     const codex = await loadCodexModule();
     coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/imported_a", files: ["/proj/imported_a/x.md"] });
     await codex.importCodexFolder();
-    expect(coreMocks.invoke).toHaveBeenCalledWith("import_codex_folder");
+    expect(coreMocks.invoke).toHaveBeenCalledWith("pick_codex_root");
     expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/imported_a", name: "imported_a" }]);
   });
 

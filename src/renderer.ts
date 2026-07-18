@@ -183,7 +183,10 @@ export function resolvePath(basePath: string, relativePath: string): string {
       continue;
     }
     if (part === "..") {
-      if (dirParts.length > 0 && dirParts[dirParts.length - 1] !== "..") {
+      const isRoot = dirParts.length === 1 && (dirParts[0] === "" || /^[a-zA-Z]:$/.test(dirParts[0]));
+      if (isRoot) {
+        continue;
+      } else if (dirParts.length > 0 && dirParts[dirParts.length - 1] !== "..") {
         dirParts.pop();
       } else {
         dirParts.push("..");

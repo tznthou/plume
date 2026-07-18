@@ -69,23 +69,23 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   themeRadio.length = 0;
   fontRadio.length = 0;
 
-  const MODE_LABELS = [
-    t("menu.compose"),
-    t("menu.split"),
-    t("menu.read")
-  ];
+  const MODE_GLYPHS = ["撰", "參", "閱"];
+  const MODE_KEYS = ["compose", "split", "read"] as const;
+  const MODE_LABELS = MODE_GLYPHS.map(
+    (glyph, i) => `${glyph} ${t(`menu.${MODE_KEYS[i]}`)}`
+  );
 
   const THEME_LABELS = [
-    t("menu.themeVolDeNuit") !== "menu.themeVolDeNuit" ? t("menu.themeVolDeNuit") : "Night Flight",
-    t("menu.themeInkstone") !== "menu.themeInkstone" ? t("menu.themeInkstone") : "Inkstone",
-    t("menu.themeAuto") !== "menu.themeAuto" ? t("menu.themeAuto") : "Auto",
+    t("menu.themeVolDeNuit"),
+    t("menu.themeInkstone"),
+    t("menu.themeAuto"),
   ];
 
   const FONT_LABELS = [
-    t("menu.fontDefault") !== "menu.fontDefault" ? t("menu.fontDefault") : "Default",
-    t("menu.fontSerif") !== "menu.fontSerif" ? t("menu.fontSerif") : "Serif",
-    t("menu.fontSans") !== "menu.fontSans" ? t("menu.fontSans") : "Sans-serif",
-    t("menu.fontMono") !== "menu.fontMono" ? t("menu.fontMono") : "Monospace",
+    t("menu.fontDefault"),
+    t("menu.fontSerif"),
+    t("menu.fontSans"),
+    t("menu.fontMono"),
   ];
 
   const appSubmenu = await Submenu.new({

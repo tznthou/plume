@@ -26,7 +26,6 @@
     "allow-pick-codex-root",
     "allow-load-locales",
     "allow-open-locales-dir",
-    "allow-import-codex-folder",
     "allow-delete-codex-folder"
   ]
 }

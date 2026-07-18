@@ -29,11 +29,6 @@ fn grant_scope(app: tauri::AppHandle, path: String) -> Result<String, String> {
     app.fs_scope()
         .allow_file(&target)
         .map_err(|e| e.to_string())?;
-    if let Some(parent) = target.parent() {
-        app.fs_scope()
-            .allow_directory(parent, true)
-            .map_err(|e| e.to_string())?;
-    }
     Ok(target.to_string_lossy().into_owned())
 }
 
@@ -283,38 +278,45 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     "renderErrorMessage": "渲染發生錯誤（下次輸入會自動重試）：{error}"
   },
   "menu": {
-    "file": "File",
-    "new": "New",
-    "open": "Open…",
-    "openCodex": "Open Codex Folder…",
-    "save": "Save",
-    "saveAs": "Save As…",
-    "exportHtml": "Export HTML…",
-    "exportPdf": "Export PDF…",
-    "edit": "Edit",
-    "undo": "Undo",
-    "redo": "Redo",
-    "cut": "Cut",
-    "copy": "Copy",
-    "paste": "Paste",
-    "selectAll": "Select All",
-    "view": "View",
-    "focusMode": "Focus Mode",
-    "typewriterMode": "Typewriter Mode",
-    "theme": "Theme",
-    "readingFont": "Reading Font",
-    "fontSize": "Font Size",
-    "fontIncrease": "Increase",
-    "fontDecrease": "Decrease",
-    "fontReset": "Reset",
-    "toc": "Table of Contents",
-    "fullscreen": "Fullscreen Reading",
-    "copyHtml": "Copy as HTML",
-    "help": "Help",
-    "shortcuts": "Keyboard Shortcuts",
+    "file": "檔案",
+    "new": "新增",
+    "open": "開啟…",
+    "openCodex": "開啟冊資料夾…",
+    "save": "儲存",
+    "saveAs": "另存新檔…",
+    "exportHtml": "匯出 HTML…",
+    "exportPdf": "匯出 PDF…",
+    "edit": "編輯",
+    "undo": "復原",
+    "redo": "重做",
+    "cut": "剪下",
+    "copy": "複製",
+    "paste": "貼上",
+    "selectAll": "全選",
+    "view": "檢視",
+    "focusMode": "專注模式",
+    "typewriterMode": "打字機模式",
+    "theme": "佈景主題",
+    "readingFont": "閱讀字型",
+    "fontSize": "字型大小",
+    "fontIncrease": "放大",
+    "fontDecrease": "縮小",
+    "fontReset": "重設",
+    "toc": "目錄",
+    "fullscreen": "全螢幕閱讀",
+    "copyHtml": "複製為 HTML",
+    "help": "輔助說明",
+    "shortcuts": "鍵盤快捷鍵",
     "compose": "Compose",
     "split": "Split",
-    "read": "Read"
+    "read": "Read",
+    "themeVolDeNuit": "暗夜飛行",
+    "themeInkstone": "硯台",
+    "themeAuto": "自動",
+    "fontDefault": "預設",
+    "fontSerif": "襯線體",
+    "fontSans": "無襯線體",
+    "fontMono": "等寬體"
   },
   "shortcuts": {
     "fileGroup": "檔案",
@@ -393,7 +395,7 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     "deleteNonExistentCodexMessage": "This codex '{name}' might have been moved or deleted. Do you want to remove it from the menu?",
     "deleteLabel": "Delete",
     "unsavedChangesTitle": "Unsaved Changes",
-    "unsavedChangesMessage": "「{file}」 has unsaved changes. Do you want to save them?",
+    "unsavedChangesMessage": "\"{file}\" has unsaved changes. Do you want to save them?",
     "saveLabel": "Save",
     "dontSaveLabel": "Don't Save",
     "discardChangesTitle": "Discard Changes",
@@ -444,7 +446,14 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     "shortcuts": "Keyboard Shortcuts",
     "compose": "Compose",
     "split": "Split",
-    "read": "Read"
+    "read": "Read",
+    "themeVolDeNuit": "Night Flight",
+    "themeInkstone": "Inkstone",
+    "themeAuto": "Auto",
+    "fontDefault": "Default",
+    "fontSerif": "Serif",
+    "fontSans": "Sans-serif",
+    "fontMono": "Monospace"
   },
   "shortcuts": {
     "fileGroup": "File",
@@ -494,11 +503,6 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     }
 
     Ok(serde_json::Value::Object(locales))
-}
-
-#[tauri::command]
-async fn import_codex_folder(app: tauri::AppHandle) -> Result<Option<CodexPick>, String> {
-    pick_codex_root(app).await
 }
 
 #[tauri::command]
@@ -565,7 +569,6 @@ pub fn run() {
             pick_codex_root,
             load_locales,
             open_locales_dir,
-            import_codex_folder,
             delete_codex_folder
         ])
         .build(tauri::generate_context!())
