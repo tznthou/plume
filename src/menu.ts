@@ -4,6 +4,7 @@ import { MenuItem } from "@tauri-apps/api/menu/menuItem";
 import { CheckMenuItem } from "@tauri-apps/api/menu/checkMenuItem";
 import type { ThemeChoice } from "./theme";
 import type { FontFamily } from "./reading-prefs";
+import { t } from "./i18n";
 
 export type Mode = "read" | "write" | "split";
 
@@ -54,18 +55,39 @@ let focusMenuItem: CheckMenuItem | undefined;
 let typewriterMenuItem: CheckMenuItem | undefined;
 
 const MODE_ORDER: Mode[] = ["write", "split", "read"];
-const MODE_LABELS = ["撰 Compose", "參 Split", "閱 Read"];
 const modeRadio: RadioEntry[] = [];
 
 const THEME_ORDER: ThemeChoice[] = ["vol-de-nuit", "inkstone", "auto"];
-const THEME_LABELS = ["Night Flight", "Inkstone", "Auto"];
 const themeRadio: RadioEntry[] = [];
 
 const FONT_KEYS: (FontFamily | null)[] = [null, "serif", "sans", "mono"];
-const FONT_LABELS = ["Default", "Serif", "Sans-serif", "Monospace"];
 const fontRadio: RadioEntry[] = [];
 
 export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void> {
+  // Clear arrays to prevent duplicate elements on subsequent initializations
+  modeRadio.length = 0;
+  themeRadio.length = 0;
+  fontRadio.length = 0;
+
+  const MODE_GLYPHS = ["撰", "參", "閱"];
+  const MODE_KEYS = ["compose", "split", "read"] as const;
+  const MODE_LABELS = MODE_GLYPHS.map(
+    (glyph, i) => `${glyph} ${t(`menu.${MODE_KEYS[i]}`)}`
+  );
+
+  const THEME_LABELS = [
+    t("menu.themeVolDeNuit"),
+    t("menu.themeInkstone"),
+    t("menu.themeAuto"),
+  ];
+
+  const FONT_LABELS = [
+    t("menu.fontDefault"),
+    t("menu.fontSerif"),
+    t("menu.fontSans"),
+    t("menu.fontMono"),
+  ];
+
   const appSubmenu = await Submenu.new({
     text: "Plume",
     items: [
@@ -82,22 +104,22 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   });
 
   const fileSubmenu = await Submenu.new({
-    text: "File",
+    text: t("menu.file"),
     items: [
-      { text: "New", accelerator: "CmdOrCtrl+N", action: () => cb.onNew() },
-      { text: "Open…", accelerator: "CmdOrCtrl+O", action: () => cb.onOpen() },
-      { text: "Open Codex Folder…", action: () => cb.onOpenCodex() },
+      { text: t("menu.new"), accelerator: "CmdOrCtrl+N", action: () => cb.onNew() },
+      { text: t("menu.open"), accelerator: "CmdOrCtrl+O", action: () => cb.onOpen() },
+      { text: t("menu.openCodex"), action: () => cb.onOpenCodex() },
       { item: "Separator" },
-      { text: "Save", accelerator: "CmdOrCtrl+S", action: () => cb.onSave() },
-      { text: "Save As…", accelerator: "CmdOrCtrl+Shift+S", action: () => cb.onSaveAs() },
+      { text: t("menu.save"), accelerator: "CmdOrCtrl+S", action: () => cb.onSave() },
+      { text: t("menu.saveAs"), accelerator: "CmdOrCtrl+Shift+S", action: () => cb.onSaveAs() },
       { item: "Separator" },
-      { text: "Export HTML…", action: () => cb.onExport() },
-      { text: "Export PDF…", accelerator: "CmdOrCtrl+P", action: () => cb.onExportPdf() },
+      { text: t("menu.exportHtml"), action: () => cb.onExport() },
+      { text: t("menu.exportPdf"), accelerator: "CmdOrCtrl+P", action: () => cb.onExportPdf() },
     ],
   });
 
   const editSubmenu = await Submenu.new({
-    text: "Edit",
+    text: t("menu.edit"),
     items: [
       { item: "Undo" },
       { item: "Redo" },
@@ -110,7 +132,7 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   });
 
   focusMenuItem = await CheckMenuItem.new({
-    text: "Focus Mode",
+    text: t("menu.focusMode"),
     accelerator: "CmdOrCtrl+Shift+F",
     checked: false,
     enabled: document.body.dataset.mode === "write", // 只歸「撰」（決策 42）
@@ -121,7 +143,7 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   });
 
   typewriterMenuItem = await CheckMenuItem.new({
-    text: "Typewriter Mode",
+    text: t("menu.typewriterMode"),
     accelerator: "CmdOrCtrl+T",
     checked: false,
     enabled: document.body.dataset.mode === "write", // 只歸「撰」（決策 42）
@@ -158,7 +180,7 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   }
 
   const themeSubmenu = await Submenu.new({
-    text: "Theme",
+    text: t("menu.theme"),
     items: themeRadio.map((r) => r.item),
   });
 
@@ -176,21 +198,21 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   }
 
   const fontSubmenu = await Submenu.new({
-    text: "Reading Font",
+    text: t("menu.readingFont"),
     items: fontRadio.map((r) => r.item),
   });
 
   const sizeSubmenu = await Submenu.new({
-    text: "Font Size",
+    text: t("menu.fontSize"),
     items: [
-      { text: "Increase", accelerator: "CmdOrCtrl+=", action: () => cb.onFontIncrease() },
-      { text: "Decrease", accelerator: "CmdOrCtrl+-", action: () => cb.onFontDecrease() },
-      { text: "Reset", accelerator: "CmdOrCtrl+0", action: () => cb.onFontReset() },
+      { text: t("menu.fontIncrease"), accelerator: "CmdOrCtrl+=", action: () => cb.onFontIncrease() },
+      { text: t("menu.fontDecrease"), accelerator: "CmdOrCtrl+-", action: () => cb.onFontDecrease() },
+      { text: t("menu.fontReset"), accelerator: "CmdOrCtrl+0", action: () => cb.onFontReset() },
     ],
   });
 
   const viewSubmenu = await Submenu.new({
-    text: "View",
+    text: t("menu.view"),
     items: [
       ...modeRadio.map((r) => r.item),
       { item: "Separator" },
@@ -201,17 +223,17 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
       fontSubmenu,
       sizeSubmenu,
       { item: "Separator" },
-      { text: "Table of Contents", action: () => cb.onToggleToc() },
-      { text: "Fullscreen Reading", action: () => cb.onFullscreen() },
+      { text: t("menu.toc"), action: () => cb.onToggleToc() },
+      { text: t("menu.fullscreen"), action: () => cb.onFullscreen() },
       { item: "Separator" },
-      { text: "Copy as HTML", accelerator: "CmdOrCtrl+Shift+C", action: () => cb.onCopyHtml() },
+      { text: t("menu.copyHtml"), accelerator: "CmdOrCtrl+Shift+C", action: () => cb.onCopyHtml() },
     ],
   });
 
   const helpSubmenu = await Submenu.new({
-    text: "Help",
+    text: t("menu.help"),
     items: [
-      { text: "Keyboard Shortcuts", accelerator: "CmdOrCtrl+/", action: () => cb.onShortcuts() },
+      { text: t("menu.shortcuts"), accelerator: "CmdOrCtrl+/", action: () => cb.onShortcuts() },
     ],
   });
   await helpSubmenu.setAsHelpMenuForNSApp();

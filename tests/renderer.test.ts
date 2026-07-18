@@ -1,8 +1,11 @@
 // Task 2 測試（docs/PLAN.md「Task 2: 渲染管線」測試設計）。
 // 測試是 spec：斷言驗證實際輸出 HTML 結構，不只驗「有輸出」。
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { render, resolvePath } from "../src/renderer";
 
-import { render } from "../src/renderer";
+vi.mock("@tauri-apps/api/core", () => ({
+  convertFileSrc: (path: string) => `asset://localhost${path.replace(/\\/g, "/")}`,
+}));
 
 /** 把 render() 輸出（已消毒）掛進 jsdom，以 DOM 結構驗證屬性與文字。 */
 function parse(html: string): HTMLDivElement {
@@ -187,5 +190,27 @@ describe("renderer.render", () => {
     const el = parse(out).querySelector("[data-math-block]");
     expect(el).not.toBeNull();
     expect(el!.textContent).toBe("E = mc^2");
+  });
+
+  it("test_resolvePath", () => {
+    expect(resolvePath("/a/b/c.md", "images/01.png")).toBe("/a/b/images/01.png");
+    expect(resolvePath("/a/b/c.md", "./images/01.png")).toBe("/a/b/images/01.png");
+    expect(resolvePath("/a/b/c.md", "../images/01.png")).toBe("/a/images/01.png");
+    expect(resolvePath("C:\\a\\b\\c.md", "images\\01.png")).toBe("C:\\a\\b\\images\\01.png");
+    expect(resolvePath("/a/b/c.md", "http://example.com/img.png")).toBe("http://example.com/img.png");
+  });
+
+  it("test_renderer_render_relativeImage_forPreview", () => {
+    const out = render("![alt](images/02.png)", "/Users/james/doc.md", true);
+    const img = parse(out).querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img!.getAttribute("src")).toBe("asset://localhost/Users/james/images/02.png");
+  });
+
+  it("test_renderer_render_relativeImage_notForPreview", () => {
+    const out = render("![alt](images/02.png)", "/Users/james/doc.md", false);
+    const img = parse(out).querySelector("img");
+    expect(img).not.toBeNull();
+    expect(img!.getAttribute("src")).toBe("images/02.png");
   });
 });

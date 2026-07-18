@@ -4,9 +4,10 @@
 // 冊清單持久化 codex.json，只存根路徑——每次切冊/啟動重新列舉（反映 Finder 增刪）；
 // 授權靠 persisted-scope 自動恢復「點過的單檔」，前端不存授權。
 import { invoke } from "@tauri-apps/api/core";
-import { message } from "@tauri-apps/plugin-dialog";
+import { ask, message } from "@tauri-apps/plugin-dialog";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import { openExternal } from "./file";
+import { t } from "./i18n";
 
 export interface CodexMeta {
   path: string; // 冊根資料夾絕對路徑
@@ -118,25 +119,100 @@ export async function openCodexFolder(): Promise<void> {
   try {
     pick = await invoke<{ root: string; files: string[] } | null>("pick_codex_root");
   } catch {
-    await message("無法開啟資料夾。", { title: "開啟冊失敗", kind: "error" });
+    await message(t("dialogs.openCodexErrorMessage"), { title: t("dialogs.openCodexErrorTitle"), kind: "error" });
     return;
   }
   if (!pick) return; // 使用者取消
   await applyCodex(pick.root, pick.files, true);
 }
 
+export async function importCodexFolder(): Promise<void> {
+  let pick: { root: string; files: string[] } | null;
+  try {
+    pick = await invoke<{ root: string; files: string[] } | null>("pick_codex_root");
+  } catch {
+    await message(t("dialogs.importCodexErrorMessage"), { title: t("dialogs.importCodexErrorTitle"), kind: "error" });
+    return;
+  }
+  if (!pick) return; // 使用者取消
+  await applyCodex(pick.root, pick.files, true);
+}
+
+export async function deleteCurrentCodex(): Promise<void> {
+  if (!currentCodex) return;
+  const path = currentCodex.path;
+  const name = currentCodex.name;
+
+  const confirm = await ask(
+    t("dialogs.deleteCodexConfirmMessage", { name }),
+    {
+      title: t("dialogs.deleteCodexConfirmTitle"),
+      kind: "warning",
+      okLabel: t("dialogs.deleteLabel"),
+      cancelLabel: t("dialogs.cancelLabel"),
+    }
+  );
+  
+  if (!confirm) return;
+
+  try {
+    await invoke<void>("delete_codex_folder", { path });
+  } catch (err) {
+    console.error("Failed to delete codex folder from backend", err);
+    await message(t("dialogs.openCodexErrorMessage"), { title: t("dialogs.openCodexErrorTitle"), kind: "error" });
+    return;
+  }
+
+  // Remove from the frontend list
+  codexList = codexList.filter((c) => c.path !== path);
+  await saveCodexList();
+
+  currentCodex = null;
+  currentTreeNodes = [];
+  refreshTree();
+  renderHeader();
+}
+
 export async function switchCodex(path: string): Promise<void> {
-  if (!codexList.some((c) => c.path === path)) return;
+  const codex = codexList.find((c) => c.path === path);
+  if (!codex) return;
   let files: string[];
   try {
     files = await invoke<string[]>("list_codex_files", { root: path });
-  } catch {
-    // 列舉失敗：資料夾已刪/移，或升級後此冊尚未重新授權（決策 50 白名單）。
-    // 統一提示重新開啟 + 復原下拉到目前的冊，避免 select 已切、樹仍 stale 的不一致。
-    await message(
-      "無法開啟此冊，可能已移動、刪除，或需重新授權；請用「開啟冊」重新選取。",
-      { title: "開啟冊失敗", kind: "error" },
-    );
+  } catch (err) {
+    const errMsg = typeof err === "string" ? err : (err && (err as any).message) || String(err);
+    if (errMsg.includes("Folder is not an approved codex")) {
+      // 列舉失敗：升級後此冊尚未重新授權（決策 50 白名單）。
+      // 統一提示重新開啟 + 復原下拉到目前的冊，避免 select 已切、樹仍 stale 的不一致。
+      await message(
+        t("dialogs.switchCodexErrorMessage"),
+        { title: t("dialogs.switchCodexErrorTitle"), kind: "error" },
+      );
+    } else if (errMsg.includes("entity not found") || errMsg.includes("No such file") || errMsg.includes("not found")) {
+      const wantDelete = await ask(
+        t("dialogs.deleteNonExistentCodexMessage", { name: codex.name }),
+        {
+          title: t("dialogs.deleteNonExistentCodexTitle"),
+          kind: "warning",
+          okLabel: t("dialogs.deleteLabel"),
+          cancelLabel: t("dialogs.cancelLabel"),
+        }
+      );
+      if (wantDelete) {
+        codexList = codexList.filter((c) => c.path !== path);
+        await saveCodexList();
+        if (currentCodex?.path === path) {
+          currentCodex = null;
+          currentTreeNodes = [];
+          refreshTree();
+        }
+      }
+    } else {
+      await message(
+        t("dialogs.switchCodexErrorMessage"),
+        { title: t("dialogs.switchCodexErrorTitle"), kind: "error" },
+      );
+    }
     renderHeader();
     return;
   }
@@ -203,6 +279,14 @@ function renderHeader(): void {
   });
   switchSelect.replaceChildren(placeholder, ...opts);
   switchSelect.value = currentCodex ? currentCodex.path : "";
+
+  // 啟用或停用刪除按鈕
+  const deleteBtn = document.querySelector<HTMLButtonElement>(".codex-delete");
+  if (deleteBtn) {
+    deleteBtn.disabled = !currentCodex;
+    deleteBtn.style.opacity = currentCodex ? "1" : "0.5";
+    deleteBtn.style.cursor = currentCodex ? "pointer" : "not-allowed";
+  }
 }
 
 // 遞迴建 DOM：資料夾 <li> 帶 data-dir + data-open + 子 <ul>；檔案 <li> 帶 data-file

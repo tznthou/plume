@@ -13,6 +13,7 @@ import footnote from "markdown-it-footnote";
 import taskLists from "markdown-it-task-lists";
 import type StateBlock from "markdown-it/lib/rules_block/state_block.mjs";
 import type StateInline from "markdown-it/lib/rules_inline/state_inline.mjs";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 // highlight.js 只註冊 16 語言子集（CLAUDE.md 硬約束：不全量 import、不開自動偵測），
 // 控制 bundle 體積與渲染時間。alias（ts/js/sh/html/yml…）由各語言定義自帶。
@@ -164,14 +165,71 @@ md.renderer.rules.math_block = (tokens, idx) =>
 md.renderer.rules.math_inline = (tokens, idx) =>
   `<span data-math-inline>${md.utils.escapeHtml(tokens[idx].content)}</span>`;
 
+export function resolvePath(basePath: string, relativePath: string): string {
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(relativePath) || relativePath.startsWith("/") || /^[a-zA-Z]:[/\\]/.test(relativePath)) {
+    return relativePath;
+  }
+  const lastSlash = Math.max(basePath.lastIndexOf("/"), basePath.lastIndexOf("\\"));
+  if (lastSlash === -1) {
+    return relativePath;
+  }
+  const dir = basePath.slice(0, lastSlash);
+  const isWindows = basePath.includes("\\");
+  const separator = isWindows ? "\\" : "/";
+  const dirParts = dir.split(/[/\\]/);
+  const relParts = relativePath.split(/[/\\]/);
+  for (const part of relParts) {
+    if (part === "." || part === "") {
+      continue;
+    }
+    if (part === "..") {
+      const isRoot = dirParts.length === 1 && (dirParts[0] === "" || /^[a-zA-Z]:$/.test(dirParts[0]));
+      if (isRoot) {
+        continue;
+      } else if (dirParts.length > 0 && dirParts[dirParts.length - 1] !== "..") {
+        dirParts.pop();
+      } else {
+        dirParts.push("..");
+      }
+    } else {
+      dirParts.push(part);
+    }
+  }
+  return dirParts.join(separator);
+}
+
+const defaultImageRender = md.renderer.rules.image || function (tokens, idx, options, _env, self) {
+  return self.renderToken(tokens, idx, options);
+};
+
+md.renderer.rules.image = function (tokens, idx, options, env, self) {
+  const token = tokens[idx];
+  const srcIdx = token.attrIndex("src");
+  if (srcIdx >= 0 && token.attrs && env && env.docPath) {
+    const rawSrc = token.attrs[srcIdx][1];
+    token.attrSet("data-original-src", rawSrc);
+    const resolvedPath = resolvePath(env.docPath, rawSrc);
+    if (env.forPreview && resolvedPath && (resolvedPath.startsWith("/") || /^[a-zA-Z]:[/\\]/.test(resolvedPath))) {
+      try {
+        token.attrs[srcIdx][1] = convertFileSrc(resolvedPath);
+      } catch (err) {
+        console.warn("[renderer] convertFileSrc failed", err);
+      }
+    }
+  }
+  return defaultImageRender(tokens, idx, options, env, self);
+};
+
 /**
  * 將 Markdown 渲染為可直接放入預覽區 innerHTML 的安全 HTML。
- * 純函式：相同輸入恆得相同輸出，無 IPC、無副作用。
  */
 const FRONT_MATTER_RE = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
 
-export function render(source: string): string {
-  return DOMPurify.sanitize(md.render(source.replace(FRONT_MATTER_RE, "")));
+export function render(source: string, docPath?: string | null, forPreview: boolean = true): string {
+  const env = { docPath, forPreview };
+  return DOMPurify.sanitize(md.render(source.replace(FRONT_MATTER_RE, ""), env), {
+    ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|asset):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+  });
 }
 
 /**

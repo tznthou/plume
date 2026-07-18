@@ -269,9 +269,7 @@ html[data-theme="inkstone"] #export-dropdown .dropdown-menu button:hover {
   display: block;
 }
 
-#recent-list {
-  margin-left: auto;
-  max-width: 220px;
+#lang-list, #recent-list {
   padding: 5px 8px;
   font: inherit;
   font-size: 12.5px;
@@ -281,6 +279,17 @@ html[data-theme="inkstone"] #export-dropdown .dropdown-menu button:hover {
   border-radius: 6px;
 }
 
+#lang-list {
+  margin-left: auto;
+  max-width: 120px;
+}
+
+#recent-list {
+  margin-left: 8px;
+  max-width: 220px;
+}
+
+html[data-theme="inkstone"] #lang-list,
 html[data-theme="inkstone"] #recent-list {
   background: transparent;
   border-color: transparent;
@@ -1388,7 +1397,7 @@ body[data-codex="open"]:not([data-mode="write"]) #codex {
   font-size: 12px;
 }
 
-.codex-add {
+.codex-add, .codex-import, .codex-delete {
   flex-shrink: 0;
   width: 24px;
   height: 24px;
@@ -1401,7 +1410,7 @@ body[data-codex="open"]:not([data-mode="write"]) #codex {
   cursor: pointer;
 }
 
-.codex-add:hover {
+.codex-add:hover, .codex-import:hover, .codex-delete:hover {
   color: var(--accent);
   border-color: var(--accent);
 }

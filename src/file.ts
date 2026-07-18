@@ -10,6 +10,7 @@ import hljsThemeCss from "highlight.js/styles/github.css?raw";
 import { getContent, setContent, getScrollDOM } from "./editor";
 import { escapeHtml, render } from "./renderer";
 import { addRecent, removeRecent } from "./recent";
+import { t } from "./i18n";
 
 export interface Tab {
   id: string;
@@ -152,20 +153,20 @@ export async function closeTab(id: string): Promise<boolean> {
   }
 
   if (tabToClose.dirty) {
-    const wantSave = await ask(`「${fileNameForTab(tabToClose)}」有未儲存的變更，要儲存嗎？`, {
-      title: "未儲存的變更",
-      okLabel: "儲存",
-      cancelLabel: "不儲存",
+    const wantSave = await ask(t("dialogs.unsavedChangesMessage", { file: fileNameForTab(tabToClose) }), {
+      title: t("dialogs.unsavedChangesTitle"),
+      okLabel: t("dialogs.saveLabel"),
+      cancelLabel: t("dialogs.dontSaveLabel"),
     });
     if (wantSave) {
       const ok = await saveTab(tabToClose);
       if (!ok) return false;
     } else {
-      const confirmAbandon = await ask("確定放棄未儲存的變更？", {
-        title: "放棄變更",
+      const confirmAbandon = await ask(t("dialogs.discardChangesMessage"), {
+        title: t("dialogs.discardChangesTitle"),
         kind: "warning",
-        okLabel: "放棄變更",
-        cancelLabel: "取消",
+        okLabel: t("dialogs.discardLabel"),
+        cancelLabel: t("dialogs.cancelLabel"),
       });
       if (!confirmAbandon) return false;
     }
@@ -219,6 +220,11 @@ async function writeToPath(tab: Tab, path: string): Promise<boolean> {
   try {
     const contentToSave = tab.id === activeTabId ? (getContent ? (getContent() || "") : "") : tab.content;
     await writeTextFile(path, contentToSave);
+    try {
+      await invoke("grant_scope", { path });
+    } catch (e) {
+      console.warn("grant_scope failed in writeToPath:", e);
+    }
     tab.path = path;
     tab.dirty = false;
     if (tab.id === activeTabId) {
@@ -228,24 +234,24 @@ async function writeToPath(tab: Tab, path: string): Promise<boolean> {
     notifyTabsChange();
     return true;
   } catch (e) {
-    await message(`儲存失敗：${String(e)}`, { title: "儲存失敗", kind: "error" });
+    await message(t("dialogs.saveFailedMessage", { error: String(e) }), { title: t("dialogs.saveFailedTitle"), kind: "error" });
     return false;
   }
 }
 
 async function confirmLoseChangesForTab(tab: Tab): Promise<boolean> {
   if (!tab.dirty) return true;
-  const wantSave = await ask(`「${fileNameForTab(tab)}」有未儲存的變更，要儲存嗎？`, {
-    title: "未儲存的變更",
-    okLabel: "儲存",
-    cancelLabel: "不儲存",
+  const wantSave = await ask(t("dialogs.unsavedChangesMessage", { file: fileNameForTab(tab) }), {
+    title: t("dialogs.unsavedChangesTitle"),
+    okLabel: t("dialogs.saveLabel"),
+    cancelLabel: t("dialogs.dontSaveLabel"),
   });
   if (wantSave) return saveTab(tab);
-  return ask("確定放棄未儲存的變更？", {
-    title: "放棄變更",
+  return ask(t("dialogs.discardChangesMessage"), {
+    title: t("dialogs.discardChangesTitle"),
     kind: "warning",
-    okLabel: "放棄變更",
-    cancelLabel: "取消",
+    okLabel: t("dialogs.discardLabel"),
+    cancelLabel: t("dialogs.cancelLabel"),
   });
 }
 
@@ -285,6 +291,12 @@ export async function openFileInTab(path: string, kind: LoadKind = "open"): Prom
   }
 
   try {
+    await invoke("grant_scope", { path });
+  } catch (e) {
+    console.warn("grant_scope failed in openFileInTab:", e);
+  }
+
+  try {
     const content = await readTextFile(path);
     const current = getActiveTab();
     const currentContent = getContent ? (getContent() || "") : "";
@@ -315,7 +327,7 @@ export async function openFileInTab(path: string, kind: LoadKind = "open"): Prom
     }
     notifyTabsChange();
   } catch (e) {
-    await message(`無法開啟檔案：${String(e)}`, { title: "開啟失敗", kind: "error" });
+    await message(t("dialogs.openFailedMessage", { error: String(e) }), { title: t("dialogs.openFailedTitle"), kind: "error" });
     await removeRecent(path);
   }
 }
@@ -425,11 +437,11 @@ ${bodyHtml}
 }
 
 export async function copyHtml(): Promise<void> {
-  const html = await renderMathForExport(render(getContent()));
+  const html = await renderMathForExport(render(getContent(), getActiveTab().path, false));
   try {
     await navigator.clipboard.writeText(html);
   } catch (e) {
-    await message(`複製失敗：${String(e)}`, { title: "複製失敗", kind: "error" });
+    await message(t("dialogs.copyFailedMessage", { error: String(e) }), { title: t("dialogs.copyFailedTitle"), kind: "error" });
   }
 }
 
@@ -440,13 +452,13 @@ export async function exportHtml(): Promise<void> {
   });
   if (target === null) return;
   // 經 render() 輸出 = 已過 DOMPurify，sanitize 不可被匯出繞過（SPEC 安全規格）
-  const bodyHtml = await renderMathForExport(render(getContent()));
+  const bodyHtml = await renderMathForExport(render(getContent(), getActiveTab().path, false));
   const html = buildExportHtml(fileName(), bodyHtml);
   try {
     await writeTextFile(target, html);
   } catch (e) {
     // 匯出是副本輸出，不碰 DocState；失敗同寫檔標準：阻斷 dialog 顯示原因
-    await message(`匯出失敗：${String(e)}`, { title: "匯出失敗", kind: "error" });
+    await message(t("dialogs.exportFailedMessage", { error: String(e) }), { title: t("dialogs.exportFailedTitle"), kind: "error" });
   }
 }
 
@@ -457,7 +469,7 @@ export async function exportPdf(): Promise<void> {
   printing = true;
   try {
     document.getElementById("print-container")?.remove();
-    const bodyHtml = await renderMathForExport(render(getContent()));
+    const bodyHtml = await renderMathForExport(render(getContent(), getActiveTab().path, true));
     const container = document.createElement("div");
     container.id = "print-container";
     container.innerHTML =
@@ -466,7 +478,7 @@ export async function exportPdf(): Promise<void> {
     await invoke("plugin:webview|print");
   } catch (e) {
     document.getElementById("print-container")?.remove();
-    await message(`匯出 PDF 失敗：${String(e)}`, { title: "匯出失敗", kind: "error" });
+    await message(t("dialogs.exportPdfFailedMessage", { error: String(e) }), { title: t("dialogs.exportFailedTitle"), kind: "error" });
   } finally {
     printing = false;
   }
@@ -481,8 +493,8 @@ export async function openExternal(path: string, kind: LoadKind = "open"): Promi
     const resolved = await invoke<string>("grant_scope", { path });
     await openFileInTab(resolved, kind);
   } catch (e) {
-    await message(`無法開啟檔案：${String(e)}`, {
-      title: "開啟失敗",
+    await message(t("dialogs.openFailedMessage", { error: String(e) }), {
+      title: t("dialogs.openFailedTitle"),
       kind: "error",
     });
   } finally {

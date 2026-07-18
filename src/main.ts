@@ -27,15 +27,17 @@ import {
   selectTab,
   closeTab,
   onTabsChange,
+  getActiveTab,
 } from "./file";
 import { getRecent } from "./recent";
-import { initCodex, openCodexFolder, restoreCodices } from "./codex";
+import { initCodex, openCodexFolder, restoreCodices, importCodexFolder, deleteCurrentCodex } from "./codex";
 import { currentChoice, initTheme, onThemeChange, setTheme, toggleTheme } from "./theme";
 import { currentFont, decreaseSize, increaseSize, initReadingPrefs, resetSize, setFont } from "./reading-prefs";
 import { initStatusbar, setDirty, updateStats } from "./statusbar";
 import { initToc, updateToc } from "./toc";
 import { initMenu, resetWritingToolsMenu, setWritingToolsEnabled, updateModeMenu, updateThemeMenu, type Mode } from "./menu";
-import { toggleShortcuts, hideShortcuts } from "./shortcuts";
+import { toggleShortcuts, hideShortcuts, clearShortcutsOverlay } from "./shortcuts";
+import { initI18n, t, currentLanguage, setLanguage, getAvailableLanguages, onLanguageChange } from "./i18n";
 
 const editorEl = document.querySelector<HTMLElement>("#editor")!;
 const previewEl = document.querySelector<HTMLElement>("#preview")!;
@@ -102,9 +104,52 @@ function openCodexAndReveal(): void {
     document.body.dataset.codex = "open";
   });
 }
-onThemeChange(() => update(render(getContent())));
-void Promise.all([initTheme(), initReadingPrefs()]).then(() => {
-  void initMenu({
+function importCodexAndReveal(): void {
+  void importCodexFolder().then(() => {
+    if (document.body.dataset.mode === "write") setMode("split");
+    document.body.dataset.codex = "open";
+  });
+}
+onThemeChange(() => update(render(getContent(), getActiveTab().path, true)));
+
+const langSelect = document.querySelector<HTMLSelectElement>("#lang-list")!;
+
+function refreshLangUI(): void {
+  const langs = getAvailableLanguages();
+  langSelect.options.length = 1; // 保留 placeholder
+  for (const l of langs) {
+    const opt = document.createElement("option");
+    opt.value = l.code;
+    opt.textContent = l.name;
+    opt.selected = l.code === currentLanguage();
+    langSelect.append(opt);
+  }
+
+  // Add separator
+  const separatorOpt = document.createElement("option");
+  separatorOpt.disabled = true;
+  separatorOpt.textContent = "──────────";
+  langSelect.append(separatorOpt);
+
+  // Add open folder option
+  const openOpt = document.createElement("option");
+  openOpt.value = "__open_folder__";
+  openOpt.textContent = "📂 " + t("ui.openLocalesFolder");
+  langSelect.append(openOpt);
+}
+
+langSelect.addEventListener("change", () => {
+  const lang = langSelect.value;
+  if (lang === "__open_folder__") {
+    langSelect.value = currentLanguage(); // reset back to active lang
+    invoke("open_locales_dir").catch(console.error);
+  } else if (lang) {
+    void setLanguage(lang);
+  }
+});
+
+function rebuildMenu(): Promise<void> {
+  return initMenu({
     onNew: doNew,
     onOpen: doOpen,
     onOpenCodex: openCodexAndReveal,
@@ -123,7 +168,7 @@ void Promise.all([initTheme(), initReadingPrefs()]).then(() => {
     onFullscreen: () => { document.body.dataset.fullscreen = "on"; },
     onCopyHtml: () => void copyHtml(),
     onShortcuts: toggleShortcuts,
-    onSetTheme: (choice) => { void setTheme(choice).then(() => update(render(getContent()))); },
+    onSetTheme: (choice) => { void setTheme(choice).then(() => update(render(getContent(), getActiveTab().path, true))); },
     onSetFont: (family) => { void setFont(family); },
     onFontIncrease: () => { void increaseSize(); },
     onFontDecrease: () => { void decreaseSize(); },
@@ -132,6 +177,17 @@ void Promise.all([initTheme(), initReadingPrefs()]).then(() => {
     themeChoice: currentChoice(),
     fontFamily: currentFont(),
   });
+}
+
+onLanguageChange(() => {
+  void rebuildMenu();
+  clearShortcutsOverlay();
+  refreshLangUI();
+});
+
+void Promise.all([initI18n(), initTheme(), initReadingPrefs()]).then(() => {
+  refreshLangUI();
+  void rebuildMenu();
 });
 
 let debounceTimer: number | undefined;
@@ -142,7 +198,7 @@ onChange(() => {
     try {
       const content = getContent();
       const t0 = performance.now();
-      update(render(content));
+      update(render(content, getActiveTab().path, true));
       updateToc();
       updateStats({
         chars: content.replace(/\s/g, "").length, // 寫作直覺的「字數」：不含空白換行
@@ -151,7 +207,7 @@ onChange(() => {
       });
     } catch (e) {
       // SPEC 錯誤處理標準：編輯區不受影響；debounce 每次輸入重跑 render，天然自動重試
-      showError(`渲染發生錯誤（下次輸入會自動重試）：${String(e)}`);
+      showError(t("dialogs.renderErrorMessage", { error: String(e) }));
     }
   }, 50);
 });
@@ -215,13 +271,15 @@ document.querySelector("#btn-export-html")!.addEventListener("click", () => void
 document.querySelector("#btn-export-pdf")!.addEventListener("click", () => void exportPdf());
 document.querySelector("#btn-theme")!.addEventListener("click", () => {
   void toggleTheme().then((choice) => {
-    update(render(getContent()));
+    update(render(getContent(), getActiveTab().path, true));
     updateThemeMenu(choice);
   });
 });
 document.querySelector("#btn-toc")!.addEventListener("click", toggleToc);
 document.querySelector("#btn-codex")!.addEventListener("click", toggleCodex);
 document.querySelector(".codex-add")!.addEventListener("click", openCodexAndReveal);
+document.querySelector(".codex-import")!.addEventListener("click", importCodexAndReveal);
+document.querySelector(".codex-delete")!.addEventListener("click", () => void deleteCurrentCodex());
 document.querySelector("#btn-fullscreen")!.addEventListener("click", () => {
   document.body.dataset.fullscreen = "on";
 });

@@ -17,14 +17,14 @@ const storeMocks = vi.hoisted(() => {
   };
 });
 
-const dialogMocks = vi.hoisted(() => ({ message: vi.fn() }));
+const dialogMocks = vi.hoisted(() => ({ message: vi.fn(), ask: vi.fn() }));
 const coreMocks = vi.hoisted(() => ({ invoke: vi.fn() }));
 const fileMocks = vi.hoisted(() => ({ openExternal: vi.fn(() => Promise.resolve()) }));
 
 vi.mock("@tauri-apps/plugin-store", () => ({
   load: vi.fn(() => Promise.resolve(storeMocks.fakeStore)),
 }));
-vi.mock("@tauri-apps/plugin-dialog", () => ({ message: dialogMocks.message }));
+vi.mock("@tauri-apps/plugin-dialog", () => ({ message: dialogMocks.message, ask: dialogMocks.ask }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: coreMocks.invoke }));
 vi.mock("../src/file", () => ({ openExternal: fileMocks.openExternal }));
 
@@ -93,6 +93,14 @@ describe("codex store", () => {
     expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/a", name: "a" }]);
   });
 
+  it("test_importCodexFolder_importsAndPersists", async () => {
+    const codex = await loadCodexModule();
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/imported_a", files: ["/proj/imported_a/x.md"] });
+    await codex.importCodexFolder();
+    expect(coreMocks.invoke).toHaveBeenCalledWith("pick_codex_root");
+    expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/imported_a", name: "imported_a" }]);
+  });
+
   it("test_openCodexFolder_twoFolders_prependsAndPersists", async () => {
     const codex = await loadCodexModule();
     coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: [] });
@@ -158,5 +166,71 @@ describe("codex store", () => {
     coreMocks.invoke.mockRejectedValueOnce(new Error("Folder is not an approved codex"));
     await codex.switchCodex("/proj/a");
     expect(dialogMocks.message).toHaveBeenCalled();
+  });
+
+  it("test_switchCodex_nonExistent_promptsDelete_acceptDelete", async () => {
+    const codex = await loadCodexModule();
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: ["/proj/a/x.md"] });
+    await codex.openCodexFolder();
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/b", files: ["/proj/b/y.md"] });
+    await codex.openCodexFolder();
+
+    // Mock list_codex_files to fail with non-existence error, and ask to accept deletion
+    coreMocks.invoke.mockRejectedValueOnce(new Error("entity not found"));
+    dialogMocks.ask.mockResolvedValueOnce(true);
+
+    await codex.switchCodex("/proj/a");
+    expect(dialogMocks.ask).toHaveBeenCalled();
+    // /proj/a should be removed, leaving only /proj/b
+    expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/b", name: "b" }]);
+  });
+
+  it("test_switchCodex_nonExistent_promptsDelete_cancelDelete", async () => {
+    const codex = await loadCodexModule();
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: ["/proj/a/x.md"] });
+    await codex.openCodexFolder();
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/b", files: ["/proj/b/y.md"] });
+    await codex.openCodexFolder();
+
+    // Mock list_codex_files to fail, and ask to cancel deletion
+    coreMocks.invoke.mockRejectedValueOnce(new Error("entity not found"));
+    dialogMocks.ask.mockResolvedValueOnce(false);
+
+    await codex.switchCodex("/proj/a");
+    expect(dialogMocks.ask).toHaveBeenCalled();
+    // Both should still exist
+    expect(storeMocks.data.get("codices")).toEqual([
+      { path: "/proj/b", name: "b" },
+      { path: "/proj/a", name: "a" },
+    ]);
+  });
+
+  it("test_deleteCurrentCodex_confirm_removesAndSaves", async () => {
+    const codex = await loadCodexModule();
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: ["/proj/a/x.md"] });
+    await codex.openCodexFolder();
+
+    // Confirm deletion
+    dialogMocks.ask.mockResolvedValueOnce(true);
+    coreMocks.invoke.mockResolvedValueOnce(undefined); // delete_codex_folder returns false (is_internal)
+
+    await codex.deleteCurrentCodex();
+    expect(dialogMocks.ask).toHaveBeenCalled();
+    expect(coreMocks.invoke).toHaveBeenCalledWith("delete_codex_folder", { path: "/proj/a" });
+    expect(storeMocks.data.get("codices")).toEqual([]);
+  });
+
+  it("test_deleteCurrentCodex_cancel_noChange", async () => {
+    const codex = await loadCodexModule();
+    coreMocks.invoke.mockResolvedValueOnce({ root: "/proj/a", files: ["/proj/a/x.md"] });
+    await codex.openCodexFolder();
+
+    // Cancel deletion
+    dialogMocks.ask.mockResolvedValueOnce(false);
+
+    await codex.deleteCurrentCodex();
+    expect(dialogMocks.ask).toHaveBeenCalled();
+    expect(coreMocks.invoke).not.toHaveBeenCalledWith("delete_codex_folder", { path: "/proj/a" });
+    expect(storeMocks.data.get("codices")).toEqual([{ path: "/proj/a", name: "a" }]);
   });
 });

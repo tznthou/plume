@@ -18,29 +18,32 @@
 
   <body data-mode="read">
     <header id="toolbar">
-      <button id="btn-new" type="button" class="edit-only">新增</button>
-      <button id="btn-open" type="button">開啟</button>
-      <button id="btn-codex" type="button" aria-label="冊：資料夾檔案樹">冊</button>
-      <button id="btn-save" type="button" class="edit-only">儲存</button>
+      <button id="btn-new" type="button" class="edit-only" data-i18n="ui.new">新增</button>
+      <button id="btn-open" type="button" data-i18n="ui.open">開啟</button>
+      <button id="btn-codex" type="button" aria-label="冊：資料夾檔案樹" data-i18n="ui.codex" data-i18n-aria-label="ui.codexDesc">冊</button>
+      <button id="btn-save" type="button" class="edit-only" data-i18n="ui.save">儲存</button>
       <div class="dropdown" id="export-dropdown">
-        <button id="btn-export" type="button" aria-haspopup="true" aria-expanded="false">匯出</button>
-        <div class="dropdown-menu" aria-label="匯出選項">
-          <button id="btn-export-html" type="button">匯出 HTML</button>
-          <button id="btn-export-pdf" type="button">匯出 PDF</button>
+        <button id="btn-export" type="button" aria-haspopup="true" aria-expanded="false" data-i18n="ui.export" data-i18n-aria-label="ui.exportDesc">匯出</button>
+        <div class="dropdown-menu" aria-label="匯出選項" data-i18n-aria-label="ui.exportDesc">
+          <button id="btn-export-html" type="button" data-i18n="ui.exportHtml">匯出 HTML</button>
+          <button id="btn-export-pdf" type="button" data-i18n="ui.exportPdf">匯出 PDF</button>
         </div>
       </div>
-      <button id="btn-theme" type="button" aria-label="切換佈景主題">
+      <button id="btn-theme" type="button" aria-label="切換佈景主題" data-i18n-aria-label="ui.themeDesc">
         <span class="theme-name" aria-hidden="true"></span>
       </button>
-      <button id="btn-toc" type="button" class="read-only">目錄</button>
-      <button id="btn-fullscreen" type="button" class="read-only">全螢幕</button>
-      <div id="mode-switch" role="group" aria-label="寫作模式">
-        <button type="button" data-mode-target="write" aria-label="撰：沉浸寫作">撰</button>
-        <button type="button" data-mode-target="split" aria-label="參：邊寫邊對照">參</button>
-        <button type="button" data-mode-target="read" aria-label="閱：閱讀">閱</button>
+      <button id="btn-toc" type="button" class="read-only" data-i18n="ui.toc">目錄</button>
+      <button id="btn-fullscreen" type="button" class="read-only" data-i18n="ui.fullscreen">全螢幕</button>
+      <div id="mode-switch" role="group" aria-label="寫作模式" data-i18n-aria-label="ui.modeSwitchDesc">
+        <button type="button" data-mode-target="write" aria-label="撰：沉浸寫作" data-i18n="ui.writeMode" data-i18n-aria-label="ui.writeModeDesc">撰</button>
+        <button type="button" data-mode-target="split" aria-label="參：邊寫邊對照" data-i18n="ui.splitMode" data-i18n-aria-label="ui.splitModeDesc">參</button>
+        <button type="button" data-mode-target="read" aria-label="閱：閱讀" data-i18n="ui.readMode" data-i18n-aria-label="ui.readModeDesc">閱</button>
       </div>
-      <select id="recent-list" aria-label="最近檔案">
-        <option value="" selected disabled>最近檔案</option>
+      <select id="lang-list" aria-label="語言" data-i18n-aria-label="ui.language">
+        <option value="" selected disabled data-i18n="ui.language">語言</option>
+      </select>
+      <select id="recent-list" aria-label="最近檔案" data-i18n-aria-label="ui.recentFiles">
+        <option value="" selected disabled data-i18n="ui.recentFiles">最近檔案</option>
       </select>
     </header>
 
@@ -48,12 +51,14 @@
       <div id="tabs-list"></div>
     </div>
 
-    <button id="btn-exit-fullscreen" type="button" aria-label="退出全螢幕">✕</button>
+    <button id="btn-exit-fullscreen" type="button" aria-label="退出全螢幕" data-i18n-aria-label="ui.exitFullscreen">✕</button>
     <main>
       <aside id="codex">
         <div class="codex-header">
-          <select class="codex-switch" aria-label="切換冊"></select>
-          <button class="codex-add" type="button" aria-label="開啟冊資料夾" title="開啟冊資料夾">+</button>
+          <select class="codex-switch" aria-label="切換冊" data-i18n-aria-label="ui.switchCodex"></select>
+          <button class="codex-add" type="button" aria-label="開啟冊資料夾" title="開啟冊資料夾" data-i18n-aria-label="ui.openCodexFolder" data-i18n-title="ui.openCodexFolder">+</button>
+          <button class="codex-import" type="button" aria-label="匯入冊資料夾" title="匯入冊資料夾" data-i18n-aria-label="ui.importCodexFolder" data-i18n-title="ui.importCodexFolder">📥</button>
+          <button class="codex-delete" type="button" aria-label="刪除冊" title="刪除冊" data-i18n-aria-label="ui.deleteCodex" data-i18n-title="ui.deleteCodex">🗑️</button>
         </div>
         <ul class="codex-tree"></ul>
       </aside>
@@ -71,19 +76,19 @@
     <footer id="statusbar">
       <div class="gauges">
         <!-- g-label 文字由 CSS 依主題切換：03 儀表縮寫 / 05 中文 -->
-        <span class="gauge" aria-label="字數"
-          ><span class="g-label" data-vol="ALT" data-ink="字數"></span
-          ><span class="g-num" id="stat-chars">0</span><span class="g-unit">字</span></span
+        <span class="gauge" aria-label="字數" data-i18n-aria-label="ui.chars"
+          ><span class="g-label" data-vol="ALT" data-ink="字數" data-i18n-data-vol="ui.charsAlt" data-i18n-data-ink="ui.chars"></span
+          ><span class="g-num" id="stat-chars">0</span><span class="g-unit" data-i18n="ui.charsUnit">字</span></span
         >
         <span class="ticks" aria-hidden="true"></span>
-        <span class="gauge" aria-label="行數"
-          ><span class="g-label" data-vol="HDG" data-ink="行數"></span
-          ><span class="g-num" id="stat-lines">1</span><span class="g-unit">行</span></span
+        <span class="gauge" aria-label="行數" data-i18n-aria-label="ui.lines"
+          ><span class="g-label" data-vol="HDG" data-ink="行數" data-i18n-data-vol="ui.linesAlt" data-i18n-data-ink="ui.lines"></span
+          ><span class="g-num" id="stat-lines">1</span><span class="g-unit" data-i18n="ui.linesUnit">行</span></span
         >
         <span class="ticks" aria-hidden="true"></span>
-        <span class="gauge" aria-label="渲染時間"
-          ><span class="g-label" data-vol="ETA" data-ink="渲染"></span
-          ><span class="g-num" id="stat-ms">0</span><span class="g-unit">ms</span></span
+        <span class="gauge" aria-label="渲染時間" data-i18n-aria-label="ui.render"
+          ><span class="g-label" data-vol="ETA" data-ink="渲染" data-i18n-data-vol="ui.renderAlt" data-i18n-data-ink="ui.render"></span
+          ><span class="g-num" id="stat-ms">0</span><span class="g-unit" data-i18n="ui.msUnit">ms</span></span
         >
       </div>
 
@@ -102,9 +107,9 @@
         <!-- 05 Inkstone：硃砂印（dirty 時實印「未存」，儲存後淡去） -->
         <svg class="seal" viewBox="0 0 30 30" width="22" height="22" aria-hidden="true">
           <rect x="1.5" y="1.5" width="27" height="27" rx="3" class="seal-frame" />
-          <text x="15" y="20.5" text-anchor="middle" class="seal-text">未存</text>
+          <text x="15" y="20.5" text-anchor="middle" class="seal-text" data-i18n="ui.unsavedSeal">未存</text>
         </svg>
-        <span class="save-text" id="save-text">已儲存</span>
+        <span class="save-text" id="save-text" data-i18n="ui.saved">已儲存</span>
       </div>
     </footer>
   </body>

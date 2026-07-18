@@ -4,6 +4,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@tauri-apps/plugin-opener", () => ({ openUrl: vi.fn() }));
+vi.mock("@tauri-apps/api/core", () => ({
+  convertFileSrc: (path: string) => `asset://localhost${path.replace(/\\/g, "/")}`,
+}));
 
 import { initPreview, scrollToTopOnNextUpdate, update } from "../src/preview";
 

@@ -1,31 +1,35 @@
-const isMac = navigator.platform.startsWith("Mac");
-const MOD = isMac ? "⌘" : "Ctrl+";
-const SHIFT = isMac ? "⇧" : "Shift+";
+import { t } from "./i18n";
 
-const GROUPS = [
-  { title: "檔案", items: [
-    [`${MOD}N`, "新增檔案"],
-    [`${MOD}O`, "開啟檔案"],
-    [`${MOD}S`, "儲存"],
-    [`${MOD}${SHIFT}S`, "另存新檔"],
-    [`${MOD}P`, "匯出 PDF"],
-  ]},
-  { title: "檢視", items: [
-    [`${MOD}E`, "切換編輯／閱讀"],
-    [`${MOD}${SHIFT}F`, "Focus Mode"],
-    [`${MOD}T`, "Typewriter Mode"],
-  ]},
-  { title: "字型", items: [
-    [`${MOD}=`, "放大字型"],
-    [`${MOD}-`, "縮小字型"],
-    [`${MOD}0`, "重設字型大小"],
-  ]},
-  { title: "工具", items: [
-    [`${MOD}${SHIFT}C`, "複製為 HTML"],
-    ["Esc", "退出全螢幕"],
-    [`${MOD}/`, "快捷鍵提示"],
-  ]},
-];
+const isMac = navigator.platform.startsWith("Mac");
+
+function getGroups() {
+  const MOD = isMac ? "⌘" : "Ctrl+";
+  const SHIFT = isMac ? "⇧" : "Shift+";
+  return [
+    { title: t("shortcuts.fileGroup"), items: [
+      [`${MOD}N`, t("shortcuts.newFile")],
+      [`${MOD}O`, t("shortcuts.openFile")],
+      [`${MOD}S`, t("shortcuts.save")],
+      [`${MOD}${SHIFT}S`, t("shortcuts.saveAs")],
+      [`${MOD}P`, t("shortcuts.exportPdf")],
+    ]},
+    { title: t("shortcuts.viewGroup"), items: [
+      [`${MOD}E`, t("shortcuts.toggleEditRead")],
+      [`${MOD}${SHIFT}F`, t("menu.focusMode")],
+      [`${MOD}T`, t("menu.typewriterMode")],
+    ]},
+    { title: t("shortcuts.fontGroup"), items: [
+      [`${MOD}=`, t("shortcuts.increaseFont")],
+      [`${MOD}-`, t("shortcuts.decreaseFont")],
+      [`${MOD}0`, t("shortcuts.resetFont")],
+    ]},
+    { title: t("shortcuts.toolsGroup"), items: [
+      [`${MOD}${SHIFT}C`, t("shortcuts.copyHtml")],
+      ["Esc", t("shortcuts.exitFullscreen")],
+      [`${MOD}/`, t("shortcuts.shortcutsTip")],
+    ]},
+  ];
+}
 
 let overlay: HTMLElement | null = null;
 let hideAbort: AbortController | null = null;
@@ -41,13 +45,13 @@ function build(): HTMLElement {
   card.className = "shortcuts-card";
 
   const heading = document.createElement("h2");
-  heading.textContent = "Keyboard Shortcuts";
+  heading.textContent = t("shortcuts.overlayTitle");
   card.appendChild(heading);
 
   const grid = document.createElement("div");
   grid.className = "shortcuts-grid";
 
-  for (const group of GROUPS) {
+  for (const group of getGroups()) {
     const section = document.createElement("section");
     const h3 = document.createElement("h3");
     h3.textContent = group.title;
@@ -103,4 +107,11 @@ export function hideShortcuts(): boolean {
   if (!overlay || overlay.hidden) return false;
   hide();
   return true;
+}
+
+export function clearShortcutsOverlay(): void {
+  if (overlay) {
+    overlay.remove();
+    overlay = null;
+  }
 }

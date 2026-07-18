@@ -1,5 +1,7 @@
 // 狀態列純呈現：字數/行數/渲染耗時 + dirty 指示（03 指針垂落、05 硃砂印實印，
 // 形態由 style.css 依 data-theme 決定，這裡只切 class 與文字）。
+import { t } from "./i18n";
+
 interface StatElements {
   chars: HTMLElement;
   lines: HTMLElement;
@@ -31,5 +33,5 @@ export function setDirty(dirty: boolean): void {
   if (!els) return;
   els.indicator.classList.toggle("dirty", dirty);
   els.indicator.classList.toggle("saved", !dirty);
-  els.saveText.textContent = dirty ? "未儲存" : "已儲存";
+  els.saveText.textContent = dirty ? t("ui.unsaved") : t("ui.saved");
 }

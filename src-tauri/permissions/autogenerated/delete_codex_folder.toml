@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-delete-codex-folder"
+description = "Enables the delete_codex_folder command without any pre-configured scope."
+commands.allow = ["delete_codex_folder"]
+
+[[permission]]
+identifier = "deny-delete-codex-folder"
+description = "Denies the delete_codex_folder command without any pre-configured scope."
+commands.deny = ["delete_codex_folder"]

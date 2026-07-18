@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-load-locales"
+description = "Enables the load_locales command without any pre-configured scope."
+commands.allow = ["load_locales"]
+
+[[permission]]
+identifier = "deny-load-locales"
+description = "Denies the load_locales command without any pre-configured scope."
+commands.deny = ["load_locales"]

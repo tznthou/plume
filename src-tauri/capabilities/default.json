@@ -23,6 +23,9 @@
     "allow-grant-scope",
     "allow-get-opened-urls",
     "allow-list-codex-files",
-    "allow-pick-codex-root"
+    "allow-pick-codex-root",
+    "allow-load-locales",
+    "allow-open-locales-dir",
+    "allow-delete-codex-folder"
   ]
 }
