@@ -51,13 +51,16 @@ function setRadioActive(group: RadioEntry[], activeIdx: number): void {
 
 let focusState = false;
 let typewriterState = false;
+
+export function isFocusActive(): boolean { return focusState; }
+export function isTypewriterActive(): boolean { return typewriterState; }
 let focusMenuItem: CheckMenuItem | undefined;
 let typewriterMenuItem: CheckMenuItem | undefined;
 
 const MODE_ORDER: Mode[] = ["write", "split", "read"];
 const modeRadio: RadioEntry[] = [];
 
-const THEME_ORDER: ThemeChoice[] = ["vol-de-nuit", "inkstone", "auto"];
+const THEME_ORDER: ThemeChoice[] = ["vol-de-nuit", "inkstone", "office-97", "auto"];
 const themeRadio: RadioEntry[] = [];
 
 const FONT_KEYS: (FontFamily | null)[] = [null, "serif", "sans", "mono"];
@@ -78,6 +81,7 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   const THEME_LABELS = [
     t("menu.themeVolDeNuit"),
     t("menu.themeInkstone"),
+    t("menu.themeOffice97"),
     t("menu.themeAuto"),
   ];
 

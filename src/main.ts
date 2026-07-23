@@ -33,9 +33,10 @@ import { getRecent } from "./recent";
 import { initCodex, openCodexFolder, restoreCodices, importCodexFolder, deleteCurrentCodex } from "./codex";
 import { currentChoice, getCustomThemes, initTheme, onThemeChange, openThemesFolder, setTheme } from "./theme";
 import { currentFont, decreaseSize, increaseSize, initReadingPrefs, resetSize, setFont } from "./reading-prefs";
+import { initContextMenu } from "./context-menu";
 import { initStatusbar, setDirty, updateStats } from "./statusbar";
 import { initToc, updateToc } from "./toc";
-import { initMenu, resetWritingToolsMenu, setWritingToolsEnabled, updateModeMenu, updateThemeMenu, type Mode } from "./menu";
+import { initMenu, isFocusActive, isTypewriterActive, resetWritingToolsMenu, setWritingToolsEnabled, updateModeMenu, updateThemeMenu, type Mode } from "./menu";
 import { toggleShortcuts, hideShortcuts, clearShortcutsOverlay } from "./shortcuts";
 import { initI18n, t, currentLanguage, setLanguage, getAvailableLanguages, onLanguageChange } from "./i18n";
 import { initSettings, hideSettings } from "./settings";
@@ -137,6 +138,11 @@ function refreshThemeUI(): void {
   optInk.value = "inkstone";
   optInk.textContent = t("menu.themeInkstone");
   themeSelect.append(optInk);
+
+  const optOffice = document.createElement("option");
+  optOffice.value = "office-97";
+  optOffice.textContent = t("menu.themeOffice97");
+  themeSelect.append(optOffice);
 
   const optAuto = document.createElement("option");
   optAuto.value = "auto";
@@ -473,7 +479,13 @@ tabsListEl.addEventListener("keydown", (e) => {
   e.preventDefault();
 });
 
-onTabsChange(renderTabs);
+onTabsChange(() => {
+  renderTabs();
+  if (document.body.dataset.mode === "write") {
+    reconfigureFocus(isFocusActive() ? focusExtension() : []);
+    reconfigureTypewriter(isTypewriterActive() ? typewriterExtension() : []);
+  }
+});
 
 void initFileModule(); // onCloseRequested dirty 攔截 + 初始視窗標題
 void refreshRecentUI(); // 啟動時載入既有清單
@@ -522,5 +534,5 @@ void listen<string[]>("file-open", (event) => {
 });
 
 // WebView 原生右鍵選單含「重新載入」，誤按會清空所有 CM6 記憶體內容。
-// app 無 beforeunload 守衛（onCloseRequested 只攔視窗關閉），全域攔截是唯一防線。
-document.addEventListener("contextmenu", (e) => e.preventDefault());
+// custom context menu 取代全域攔截：阻擋 Reload + 提供 Cut/Copy/Paste。
+initContextMenu();
