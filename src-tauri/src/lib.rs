@@ -569,7 +569,8 @@ fn sanitize_theme_css(css: &str) -> String {
     let mut chars = css.char_indices().peekable();
 
     while let Some(&(i, _)) = chars.peek() {
-        if css[i..].starts_with("url(") {
+        let is_url = css.get(i..i + 4).map(|s| s.eq_ignore_ascii_case("url(")).unwrap_or(false);
+        if is_url {
             result.push_str("url(");
             for _ in 0..4 { chars.next(); }
             let mut inside = String::new();
@@ -591,7 +592,11 @@ fn sanitize_theme_css(css: &str) -> String {
     }
 
     result.lines()
-        .filter(|line| !line.trim_start().starts_with("@import"))
+        .filter(|line| {
+            let stripped = line.trim_start();
+            let without_comments = stripped.trim_start_matches(|c: char| c == '/' || c == '*' || c.is_whitespace());
+            !without_comments.get(..7).map(|s| s.eq_ignore_ascii_case("@import")).unwrap_or(false)
+        })
         .collect::<Vec<_>>()
         .join("\n")
 }

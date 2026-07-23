@@ -165,5 +165,3 @@ export async function setTheme(next: ThemeChoice): Promise<void> {
   } catch {}
 }
 
-
-

@@ -68,6 +68,10 @@ export function getDirectDownloadUrl(
       );
       if (armMatch) return armMatch.browser_download_url;
     }
+    const x64Match = assets.find(
+      (a) => /\.dmg$/i.test(a.name) && (a.name.includes("x86_64") || a.name.includes("x64"))
+    );
+    if (x64Match) return x64Match.browser_download_url;
     const macMatch = assets.find((a) => /\.dmg$/i.test(a.name) || /\.pkg$/i.test(a.name));
     if (macMatch) return macMatch.browser_download_url;
   }
@@ -96,11 +100,11 @@ export async function checkForUpdates(): Promise<{
       headers: { Accept: "application/vnd.github.v3+json" },
       signal: ac.signal,
     });
-    clearTimeout(timeoutId);
     if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
     const data = (await res.json()) as { tag_name?: string; html_url?: string; assets?: ReleaseAsset[] };
+    clearTimeout(timeoutId);
     if (!data.tag_name) {
       throw new Error("No tag_name returned");
     }
@@ -217,6 +221,7 @@ export function hideSettings(): boolean {
   hideAbort = ac;
   overlay.classList.remove("visible");
   const done = () => {
+    ac.abort();
     if (overlay) overlay.hidden = true;
     hideAbort = null;
   };

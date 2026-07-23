@@ -95,7 +95,19 @@ function hide(): void {
   const ac = new AbortController();
   hideAbort = ac;
   overlay.classList.remove("visible");
-  overlay.addEventListener("transitionend", () => { overlay!.hidden = true; hideAbort = null; }, { once: true, signal: ac.signal });
+  const done = () => {
+    ac.abort();
+    overlay!.hidden = true;
+    hideAbort = null;
+  };
+  const style = getComputedStyle(overlay);
+  const dur = parseFloat(style.transitionDuration || "0");
+  if (dur <= 0) {
+    done();
+  } else {
+    overlay.addEventListener("transitionend", done, { once: true, signal: ac.signal });
+    setTimeout(() => { if (hideAbort === ac) done(); }, dur * 1000 + 100);
+  }
 }
 
 export function toggleShortcuts(): void {
