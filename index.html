@@ -18,33 +18,81 @@
 
   <body data-mode="read">
     <header id="toolbar">
-      <button id="btn-new" type="button" class="edit-only" data-i18n="ui.new">新增</button>
-      <button id="btn-open" type="button" data-i18n="ui.open">開啟</button>
-      <button id="btn-codex" type="button" aria-label="冊：資料夾檔案樹" data-i18n="ui.codex" data-i18n-aria-label="ui.codexDesc">冊</button>
-      <button id="btn-save" type="button" class="edit-only" data-i18n="ui.save">儲存</button>
+      <button id="btn-new" type="button" class="edit-only" aria-label="新增檔案" title="新增檔案" data-i18n-aria-label="ui.newDesc" data-i18n-title="ui.newDesc" data-i18n-tooltip="ui.newDesc" data-tooltip="新增檔案">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="12" y1="11" x2="12" y2="17"></line>
+          <line x1="9" y1="14" x2="15" y2="14"></line>
+        </svg>
+      </button>
+      <button id="btn-open" type="button" aria-label="開啟檔案" title="開啟檔案" data-i18n-aria-label="ui.openDesc" data-i18n-title="ui.openDesc" data-i18n-tooltip="ui.openDesc" data-tooltip="開啟檔案">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          <line x1="12" y1="11" x2="12" y2="17"></line>
+          <line x1="9" y1="14" x2="15" y2="14"></line>
+        </svg>
+      </button>
+      <button id="btn-codex" type="button" aria-label="冊：資料夾檔案樹" title="冊：資料夾檔案樹" data-i18n-aria-label="ui.codexDesc" data-i18n-title="ui.codexDesc" data-i18n-tooltip="ui.codexDesc" data-tooltip="冊：資料夾檔案樹">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+        </svg>
+      </button>
+      <button id="btn-save" type="button" class="edit-only" aria-label="儲存" title="儲存" data-i18n-aria-label="ui.saveDesc" data-i18n-title="ui.saveDesc" data-i18n-tooltip="ui.saveDesc" data-tooltip="儲存">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+          <polyline points="17 21 17 13 7 13 7 21"></polyline>
+          <polyline points="7 3 7 8 15 8"></polyline>
+        </svg>
+      </button>
       <div class="dropdown" id="export-dropdown">
-        <button id="btn-export" type="button" aria-haspopup="true" aria-expanded="false" data-i18n="ui.export" data-i18n-aria-label="ui.exportDesc">匯出</button>
+        <button id="btn-export" type="button" aria-haspopup="true" aria-expanded="false" aria-label="匯出選項" title="匯出選項" data-i18n-aria-label="ui.exportDesc" data-i18n-title="ui.exportDesc" data-i18n-tooltip="ui.exportDesc" data-tooltip="匯出選項">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+        </button>
         <div class="dropdown-menu" aria-label="匯出選項" data-i18n-aria-label="ui.exportDesc">
           <button id="btn-export-html" type="button" data-i18n="ui.exportHtml">匯出 HTML</button>
           <button id="btn-export-pdf" type="button" data-i18n="ui.exportPdf">匯出 PDF</button>
         </div>
       </div>
-      <button id="btn-theme" type="button" aria-label="切換佈景主題" data-i18n-aria-label="ui.themeDesc">
-        <span class="theme-name" aria-hidden="true"></span>
+      <button id="btn-fullscreen" type="button" class="read-only" aria-label="全螢幕" title="全螢幕" data-i18n-aria-label="ui.fullscreenDesc" data-i18n-title="ui.fullscreenDesc" data-i18n-tooltip="ui.fullscreenDesc" data-tooltip="全螢幕">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+          <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+        </svg>
       </button>
-      <button id="btn-toc" type="button" class="read-only" data-i18n="ui.toc">目錄</button>
-      <button id="btn-fullscreen" type="button" class="read-only" data-i18n="ui.fullscreen">全螢幕</button>
       <div id="mode-switch" role="group" aria-label="寫作模式" data-i18n-aria-label="ui.modeSwitchDesc">
-        <button type="button" data-mode-target="write" aria-label="撰：沉浸寫作" data-i18n="ui.writeMode" data-i18n-aria-label="ui.writeModeDesc">撰</button>
-        <button type="button" data-mode-target="split" aria-label="參：邊寫邊對照" data-i18n="ui.splitMode" data-i18n-aria-label="ui.splitModeDesc">參</button>
-        <button type="button" data-mode-target="read" aria-label="閱：閱讀" data-i18n="ui.readMode" data-i18n-aria-label="ui.readModeDesc">閱</button>
+        <button type="button" data-mode-target="write" aria-label="撰：沉浸寫作" title="撰：沉浸寫作" data-i18n-aria-label="ui.writeModeDesc" data-i18n-title="ui.writeModeDesc" data-i18n-tooltip="ui.writeModeDesc" data-tooltip="撰：沉浸寫作">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+        </button>
+        <button type="button" data-mode-target="split" aria-label="參：邊寫邊對照" title="參：邊寫邊對照" data-i18n-aria-label="ui.splitModeDesc" data-i18n-title="ui.splitModeDesc" data-i18n-tooltip="ui.splitModeDesc" data-tooltip="參：邊寫邊對照">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="12" y1="3" x2="12" y2="21"></line>
+          </svg>
+        </button>
+        <button type="button" data-mode-target="read" aria-label="閱：閱讀" title="閱：閱讀" data-i18n-aria-label="ui.readModeDesc" data-i18n-title="ui.readModeDesc" data-i18n-tooltip="ui.readModeDesc" data-tooltip="閱：閱讀">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar" aria-hidden="true">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
       </div>
-      <select id="lang-list" aria-label="語言" data-i18n-aria-label="ui.language">
-        <option value="" selected disabled data-i18n="ui.language">語言</option>
-      </select>
-      <select id="recent-list" aria-label="最近檔案" data-i18n-aria-label="ui.recentFiles">
+      <select id="recent-list" aria-label="最近檔案" title="最近檔案" data-i18n-aria-label="ui.recentFiles" data-i18n-title="ui.recentFiles">
         <option value="" selected disabled data-i18n="ui.recentFiles">最近檔案</option>
       </select>
+      <button id="btn-settings" type="button" aria-label="設定" title="設定" data-i18n-aria-label="ui.settings" data-i18n-title="ui.settings" data-i18n-tooltip="ui.settings" data-tooltip="設定">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-gear" aria-hidden="true">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
     </header>
 
     <div id="tabs-container">
@@ -112,5 +160,41 @@
         <span class="save-text" id="save-text" data-i18n="ui.saved">已儲存</span>
       </div>
     </footer>
+
+    <div id="settings-overlay" class="settings-overlay" hidden>
+      <div class="settings-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div class="settings-header">
+          <h2 id="settings-title" data-i18n="ui.settings">設定</h2>
+          <button id="btn-close-settings" type="button" class="settings-close-btn" aria-label="關閉" data-i18n-aria-label="ui.close" title="關閉" data-i18n-title="ui.close">✕</button>
+        </div>
+        <div class="settings-body">
+          <div class="settings-row">
+            <label for="theme-list" class="settings-label" data-i18n="ui.design">設計</label>
+            <div class="settings-theme-group">
+              <select id="theme-list" aria-label="設計" data-i18n-aria-label="ui.design">
+                <option value="vol-de-nuit" data-i18n="menu.themeVolDeNuit">暗夜飛行</option>
+                <option value="inkstone" data-i18n="menu.themeInkstone">硯台</option>
+                <option value="auto" data-i18n="menu.themeAuto">自動</option>
+              </select>
+              <button id="btn-open-themes" type="button" class="settings-btn-secondary" title="開啟佈景主題資料夾" data-i18n-title="ui.openThemesFolder" data-i18n="ui.openThemesFolder">📂 主題目錄</button>
+            </div>
+          </div>
+          <div class="settings-row">
+            <label for="lang-list" class="settings-label" data-i18n="ui.language">語言</label>
+            <select id="lang-list" aria-label="語言" data-i18n-aria-label="ui.language">
+              <option value="" selected disabled data-i18n="ui.language">語言</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label" data-i18n="ui.version">版本</span>
+            <div class="settings-version-group">
+              <span id="app-version" class="settings-value">v0.11.0</span>
+              <button id="btn-check-update" type="button" class="settings-btn-secondary" data-i18n="ui.checkUpdate">檢查更新</button>
+            </div>
+          </div>
+          <div id="update-status" class="settings-update-status" hidden></div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

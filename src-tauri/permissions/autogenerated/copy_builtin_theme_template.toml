@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-copy-builtin-theme-template"
+description = "Enables the copy_builtin_theme_template command without any pre-configured scope."
+commands.allow = ["copy_builtin_theme_template"]
+
+[[permission]]
+identifier = "deny-copy-builtin-theme-template"
+description = "Denies the copy_builtin_theme_template command without any pre-configured scope."
+commands.deny = ["copy_builtin_theme_template"]

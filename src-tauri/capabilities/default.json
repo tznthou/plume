@@ -26,6 +26,10 @@
     "allow-pick-codex-root",
     "allow-load-locales",
     "allow-open-locales-dir",
-    "allow-delete-codex-folder"
+    "allow-delete-codex-folder",
+    "allow-load-custom-themes",
+    "allow-open-themes-dir",
+    "allow-import-theme-file",
+    "allow-copy-builtin-theme-template"
   ]
 }

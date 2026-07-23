@@ -31,13 +31,14 @@ import {
 } from "./file";
 import { getRecent } from "./recent";
 import { initCodex, openCodexFolder, restoreCodices, importCodexFolder, deleteCurrentCodex } from "./codex";
-import { currentChoice, initTheme, onThemeChange, setTheme, toggleTheme } from "./theme";
+import { currentChoice, getCustomThemes, initTheme, onThemeChange, openThemesFolder, setTheme, toggleTheme, type ThemeChoice } from "./theme";
 import { currentFont, decreaseSize, increaseSize, initReadingPrefs, resetSize, setFont } from "./reading-prefs";
 import { initStatusbar, setDirty, updateStats } from "./statusbar";
 import { initToc, updateToc } from "./toc";
 import { initMenu, resetWritingToolsMenu, setWritingToolsEnabled, updateModeMenu, updateThemeMenu, type Mode } from "./menu";
 import { toggleShortcuts, hideShortcuts, clearShortcutsOverlay } from "./shortcuts";
 import { initI18n, t, currentLanguage, setLanguage, getAvailableLanguages, onLanguageChange } from "./i18n";
+import { initSettings, hideSettings } from "./settings";
 
 const editorEl = document.querySelector<HTMLElement>("#editor")!;
 const previewEl = document.querySelector<HTMLElement>("#preview")!;
@@ -47,6 +48,9 @@ initPreview(previewEl, getScrollDOM());
 initToc(document.querySelector<HTMLElement>("#toc")!, previewEl);
 initCodex(document.querySelector<HTMLElement>("#codex")!);
 initStatusbar();
+initSettings({
+  onOpenThemesFolder: () => void openThemesFolder(),
+});
 onDirtyChange(setDirty); // dirty 指示：03 指針垂落 / 05 硃砂印
 onLoad((kind) => {
   scrollToTopOnNextUpdate();
@@ -110,9 +114,75 @@ function importCodexAndReveal(): void {
     document.body.dataset.codex = "open";
   });
 }
-onThemeChange(() => update(render(getContent(), getActiveTab().path, true)));
+onThemeChange(() => {
+  refreshThemeUI();
+  update(render(getContent(), getActiveTab().path, true));
+});
 
 const langSelect = document.querySelector<HTMLSelectElement>("#lang-list")!;
+const themeSelect = document.querySelector<HTMLSelectElement>("#theme-list");
+
+function refreshThemeUI(): void {
+  if (!themeSelect) return;
+
+  const current = currentChoice();
+  themeSelect.options.length = 0;
+
+  const optVol = document.createElement("option");
+  optVol.value = "vol-de-nuit";
+  optVol.textContent = t("menu.themeVolDeNuit");
+  themeSelect.append(optVol);
+
+  const optInk = document.createElement("option");
+  optInk.value = "inkstone";
+  optInk.textContent = t("menu.themeInkstone");
+  themeSelect.append(optInk);
+
+  const optAuto = document.createElement("option");
+  optAuto.value = "auto";
+  optAuto.textContent = t("menu.themeAuto");
+  themeSelect.append(optAuto);
+
+  const customThemes = getCustomThemes();
+  if (customThemes.length > 0) {
+    const sepOpt = document.createElement("option");
+    sepOpt.disabled = true;
+    sepOpt.textContent = "─── " + t("ui.customThemesGroup") + " ───";
+    themeSelect.append(sepOpt);
+
+    for (const theme of customThemes) {
+      const opt = document.createElement("option");
+      opt.value = theme.id;
+      opt.textContent = theme.name;
+      themeSelect.append(opt);
+    }
+  }
+
+  const sepActions = document.createElement("option");
+  sepActions.disabled = true;
+  sepActions.textContent = "──────────";
+  themeSelect.append(sepActions);
+
+  const openOpt = document.createElement("option");
+  openOpt.value = "__open_themes__";
+  openOpt.textContent = "📂 " + t("ui.openThemesFolder");
+  themeSelect.append(openOpt);
+
+  themeSelect.value = current;
+}
+
+themeSelect?.addEventListener("change", () => {
+  const val = themeSelect.value;
+  if (val === "__open_themes__") {
+    themeSelect.value = currentChoice();
+    void openThemesFolder();
+  } else if (val) {
+    void setTheme(val).then(() => {
+      update(render(getContent(), getActiveTab().path, true));
+      updateThemeMenu(val);
+    });
+  }
+});
 
 function refreshLangUI(): void {
   const langs = getAvailableLanguages();
@@ -168,7 +238,12 @@ function rebuildMenu(): Promise<void> {
     onFullscreen: () => { document.body.dataset.fullscreen = "on"; },
     onCopyHtml: () => void copyHtml(),
     onShortcuts: toggleShortcuts,
-    onSetTheme: (choice) => { void setTheme(choice).then(() => update(render(getContent(), getActiveTab().path, true))); },
+    onSetTheme: (choice) => {
+      void setTheme(choice).then(() => {
+        update(render(getContent(), getActiveTab().path, true));
+        refreshThemeUI();
+      });
+    },
     onSetFont: (family) => { void setFont(family); },
     onFontIncrease: () => { void increaseSize(); },
     onFontDecrease: () => { void decreaseSize(); },
@@ -187,6 +262,7 @@ onLanguageChange(() => {
 
 void Promise.all([initI18n(), initTheme(), initReadingPrefs()]).then(() => {
   refreshLangUI();
+  refreshThemeUI();
   void rebuildMenu();
 });
 
@@ -269,13 +345,7 @@ document.addEventListener("click", () => {
 
 document.querySelector("#btn-export-html")!.addEventListener("click", () => void exportHtml());
 document.querySelector("#btn-export-pdf")!.addEventListener("click", () => void exportPdf());
-document.querySelector("#btn-theme")!.addEventListener("click", () => {
-  void toggleTheme().then((choice) => {
-    update(render(getContent(), getActiveTab().path, true));
-    updateThemeMenu(choice);
-  });
-});
-document.querySelector("#btn-toc")!.addEventListener("click", toggleToc);
+document.querySelector("#btn-toc")?.addEventListener("click", toggleToc);
 document.querySelector("#btn-codex")!.addEventListener("click", toggleCodex);
 document.querySelector(".codex-add")!.addEventListener("click", openCodexAndReveal);
 document.querySelector(".codex-import")!.addEventListener("click", importCodexAndReveal);
@@ -294,6 +364,7 @@ for (const btn of modeButtons) {
 
 window.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
+    if (hideSettings()) return;
     if (hideShortcuts()) return;
     if (document.body.dataset.fullscreen === "on") {
       delete document.body.dataset.fullscreen;

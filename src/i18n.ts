@@ -42,14 +42,33 @@ let allLocales: Record<string, any> = {
       unsaved: "未儲存",
       unsavedSeal: "未存",
       language: "語言",
+      design: "設計",
+      settings: "設定",
+      version: "版本",
+      close: "關閉",
+      checkUpdate: "檢查更新",
+      checkingUpdate: "檢查中…",
+      upToDate: "已是最新版本",
+      newVersionAvailable: "發現新版本：{version}",
+      downloadUpdate: "下載更新",
+      checkUpdateFailed: "無法取得更新資訊",
       codexDesc: "冊：資料夾檔案樹",
+      newDesc: "新增檔案",
+      openDesc: "開啟檔案",
+      saveDesc: "儲存檔案",
+      tocDesc: "目錄",
+      fullscreenDesc: "全螢幕閱讀",
       exportDesc: "匯出選項",
       themeDesc: "切換佈景主題",
       modeSwitchDesc: "寫作模式",
       charsAlt: "ALT",
       linesAlt: "HDG",
       renderAlt: "ETA",
-      openLocalesFolder: "開啟語言包資料夾"
+      openLocalesFolder: "開啟語言包資料夾",
+      openThemesFolder: "開啟佈景主題資料夾",
+      importTheme: "複製/匯入佈景主題…",
+      copyBuiltinTheme: "複製內建主題為範本",
+      customThemesGroup: "自訂主題"
     },
     dialogs: {
       openCodexErrorTitle: "開啟冊失敗",
@@ -178,14 +197,33 @@ let allLocales: Record<string, any> = {
       unsaved: "Unsaved",
       unsavedSeal: "Dirty",
       language: "Language",
+      design: "Design",
+      settings: "Settings",
+      version: "Version",
+      close: "Close",
+      checkUpdate: "Check for Updates",
+      checkingUpdate: "Checking for updates…",
+      upToDate: "You are using the latest version",
+      newVersionAvailable: "New version available: {version}",
+      downloadUpdate: "Download Update",
+      checkUpdateFailed: "Failed to check for updates",
       codexDesc: "Codex: folder tree",
+      newDesc: "New File",
+      openDesc: "Open File",
+      saveDesc: "Save File",
+      tocDesc: "TOC",
+      fullscreenDesc: "Fullscreen",
       exportDesc: "Export options",
       themeDesc: "Switch theme",
       modeSwitchDesc: "Writing mode",
       charsAlt: "ALT",
       linesAlt: "HDG",
       renderAlt: "ETA",
-      openLocalesFolder: "Open Locales Folder"
+      openLocalesFolder: "Open Locales Folder",
+      openThemesFolder: "Open Themes Folder",
+      importTheme: "Copy/Import Theme File…",
+      copyBuiltinTheme: "Copy Built-in Theme Template",
+      customThemesGroup: "Custom Themes"
     },
     dialogs: {
       openCodexErrorTitle: "Open Codex Failed",
@@ -350,6 +388,15 @@ export function updateDOMTranslations(): void {
   document.querySelectorAll<HTMLElement>("[data-i18n-title]").forEach((el) => {
     const key = el.getAttribute("data-i18n-title")!;
     el.setAttribute("title", t(key));
+  });
+
+  // Update elements with tooltip translation
+  document.querySelectorAll<HTMLElement>("[data-i18n-tooltip]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-tooltip")!;
+    const translated = t(key);
+    el.setAttribute("data-tooltip", translated);
+    el.setAttribute("title", translated);
+    el.setAttribute("aria-label", translated);
   });
 
   // Update elements with custom data-vol translation (g-label status ALT)

@@ -552,6 +552,341 @@ fn open_locales_dir(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct CustomTheme {
+    pub id: String,
+    pub name: String,
+    pub css_content: String,
+    pub file_path: String,
+}
+
+fn parse_theme_name(content: &str, default_id: &str) -> String {
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("/*") && trimmed.contains("Theme Name:") {
+            if let Some(pos) = trimmed.find("Theme Name:") {
+                let rest = &trimmed[pos + "Theme Name:".len()..];
+                let cleaned = rest.trim_matches(|c: char| c == '*' || c == '/' || c.is_whitespace());
+                if !cleaned.is_empty() {
+                    return cleaned.to_string();
+                }
+            }
+        }
+    }
+    default_id.to_string()
+}
+
+const TEMPLATE_EMERALD_FOREST: &str = r#"/* Theme Name: 翠綠森林 (Emerald Forest) */
+html[data-theme="emerald-forest"] {
+  --bg: #0d1b1e;
+  --bg-bar: #122428;
+  --bg-panel: #152828;
+  --bg-inset: #091315;
+  --fg: #e0ece4;
+  --fg-strong: #f0f7f4;
+  --fg-muted: #799a8b;
+  --accent: #4ecca3;
+  --accent-2: #36d399;
+  --line: #1f3a34;
+  --font-ui: "JetBrains Mono", ui-monospace, monospace;
+  --font-edit: "JetBrains Mono", ui-monospace, "Noto Sans TC", monospace;
+  --font-preview: "Literata", "Noto Serif TC", serif;
+}
+
+html[data-theme="emerald-forest"] body {
+  background:
+    radial-gradient(1.5px 1.5px at 70% 8%, rgba(78, 204, 163, 0.35), transparent 60%),
+    radial-gradient(1px 1px at 30% 92%, rgba(78, 204, 163, 0.25), transparent 60%),
+    var(--bg);
+}
+"#;
+
+const TEMPLATE_NORDIC_FROST: &str = r#"/* Theme Name: 極光北歐 (Nordic Frost) */
+html[data-theme="nordic-frost"] {
+  --bg: #edf2f7;
+  --bg-bar: #e2e8f0;
+  --bg-panel: #e2e8f0;
+  --bg-inset: rgba(203, 213, 225, 0.5);
+  --fg: #1e293b;
+  --fg-strong: #0f172a;
+  --fg-muted: #64748b;
+  --accent: #0284c7;
+  --accent-2: #14b8a6;
+  --line: #cbd5e1;
+  --font-ui: "Space Mono", "Noto Sans TC", monospace;
+  --font-edit: "Martian Mono", "Noto Sans TC", monospace;
+  --font-preview: "Noto Sans TC", "PingFang TC", sans-serif;
+}
+
+html[data-theme="nordic-frost"] #toolbar {
+  background: var(--bg-bar);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+"#;
+
+const TEMPLATE_OFFICE_97: &str = r#"/* Theme Name: Office 97 (經典辦公室) */
+html[data-theme="office-97"] {
+  --bg: #d4d0c8;
+  --bg-bar: #d4d0c8;
+  --bg-panel: #d4d0c8;
+  --bg-inset: #ffffff;
+  --fg: #000000;
+  --fg-strong: #000080;
+  --fg-muted: #404040;
+  --accent: #000080;
+  --accent-2: #1084d0;
+  --line: #808080;
+  --font-ui: "Tahoma", "MS Sans Serif", "Arial", "Noto Sans TC", sans-serif;
+  --font-edit: "Courier New", ui-monospace, monospace;
+  --font-preview: "Times New Roman", "Noto Serif TC", serif;
+}
+
+html[data-theme="office-97"] #toolbar {
+  background: #d4d0c8;
+  border-bottom: 2px solid #808080;
+  box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #404040;
+}
+
+html[data-theme="office-97"] #toolbar button {
+  background: #d4d0c8;
+  border-top: 1px solid #ffffff;
+  border-left: 1px solid #ffffff;
+  border-right: 1px solid #404040;
+  border-bottom: 1px solid #404040;
+  border-radius: 0;
+  color: #000000;
+  box-shadow: inset -1px -1px 0 #808080;
+}
+
+html[data-theme="office-97"] #toolbar button:hover {
+  background: #e4e0d8;
+  border-top: 1px solid #ffffff;
+  border-left: 1px solid #ffffff;
+  border-right: 1px solid #000000;
+  border-bottom: 1px solid #000000;
+}
+
+html[data-theme="office-97"] #toolbar button:active {
+  border-top: 1px solid #404040;
+  border-left: 1px solid #404040;
+  border-right: 1px solid #ffffff;
+  border-bottom: 1px solid #ffffff;
+  box-shadow: inset 1px 1px 0 #808080;
+}
+
+/* Toolbar Retro Icons for Office 97 */
+html[data-theme="office-97"] #toolbar button svg {
+  display: none !important;
+}
+
+html[data-theme="office-97"] #toolbar button::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  display: block;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+html[data-theme="office-97"] #btn-new::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' stroke='%23000000' stroke-width='1' d='M3 1h7l4 4v10H3z'/%3E%3Cpath fill='%23c0c0c0' stroke='%23000000' stroke-width='1' d='M10 1v4h4'/%3E%3Cline x1='5' y1='7' x2='11' y2='7' stroke='%23808080'/%3E%3Cline x1='5' y1='9' x2='11' y2='9' stroke='%23808080'/%3E%3Cline x1='5' y1='11' x2='9' y2='11' stroke='%23808080'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] #btn-open::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffca28' stroke='%23b26a00' d='M1 3h5l2 2h7v9H1z'/%3E%3Cpath fill='%23ffe082' stroke='%23b26a00' d='M1 6h14l-2 7H3z'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] #btn-codex::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='2' y='2' width='12' height='12' fill='%23000080' stroke='%23000000' rx='1'/%3E%3Crect x='4' y='2' width='2' height='12' fill='%23ffffff'/%3E%3Crect x='7' y='5' width='5' height='2' fill='%23ffca28'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] #btn-save::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='2' y='1' width='12' height='14' fill='%23000080' stroke='%23000000' rx='1'/%3E%3Crect x='4' y='1' width='7' height='5' fill='%23c0c0c0' stroke='%23808080'/%3E%3Crect x='5' y='2' width='2' height='3' fill='%23000080'/%3E%3Crect x='4' y='8' width='8' height='6' fill='%23ffffff' stroke='%23808080'/%3E%3Cline x1='6' y1='10' x2='10' y2='10' stroke='%23000080'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] #btn-export::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' stroke='%23000000' d='M2 1h8v12H2z'/%3E%3Cpath fill='%23008000' d='M8 4v3H4v2h4v3l5-4z'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] #btn-fullscreen::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='2' y='2' width='12' height='12' fill='none' stroke='%23000000' stroke-width='2'/%3E%3Crect x='2' y='2' width='12' height='3' fill='%23000080'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] button[data-mode-target="write"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffca28' stroke='%23000000' d='M12 1l3 3-9 9-4 1 1-4z'/%3E%3Cpath fill='%23ff8f00' d='M10 3l3 3-7 7-3-3z'/%3E%3Cpath fill='%23000000' d='M2 14l-1 1 2-1z'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] button[data-mode-target="split"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Crect x='1' y='2' width='6' height='12' fill='%23ffffff' stroke='%23000000'/%3E%3Crect x='9' y='2' width='6' height='12' fill='%23ffffff' stroke='%23000000'/%3E%3Cline x1='3' y1='5' x2='5' y2='5' stroke='%23000080'/%3E%3Cline x1='11' y1='5' x2='13' y2='5' stroke='%23000080'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] button[data-mode-target="read"]::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23ffffff' stroke='%23000000' d='M1 3c3-1 6 0 7 2 1-2 4-3 7-2v9c-3-1-6 0-7 2-1-2-4-3-7-2z'/%3E%3Cline x1='8' y1='5' x2='8' y2='14' stroke='%23000080'/%3E%3C/svg%3E");
+}
+
+html[data-theme="office-97"] #btn-settings::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23808080' stroke='%23000000' d='M12 1a3 3 0 0 0-3 4L2 12l2 2 7-7a3 3 0 0 0 1-6z'/%3E%3Ccircle cx='13' cy='3' r='1' fill='%23ffffff'/%3E%3C/svg%3E");
+}
+"#;
+
+#[tauri::command]
+fn load_custom_themes(app: tauri::AppHandle) -> Result<Vec<CustomTheme>, String> {
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let themes_dir = app_dir.join("themes");
+    if !themes_dir.exists() {
+        std::fs::create_dir_all(&themes_dir).map_err(|e| e.to_string())?;
+    }
+
+    let emerald_path = themes_dir.join("emerald-forest.css");
+    if !emerald_path.exists() {
+        let _ = std::fs::write(&emerald_path, TEMPLATE_EMERALD_FOREST);
+    }
+    let nordic_path = themes_dir.join("nordic-frost.css");
+    if !nordic_path.exists() {
+        let _ = std::fs::write(&nordic_path, TEMPLATE_NORDIC_FROST);
+    }
+    let office_path = themes_dir.join("office-97.css");
+    if !office_path.exists() || !std::fs::read_to_string(&office_path).map(|c| c.contains("Toolbar Retro Icons")).unwrap_or(false) {
+        let _ = std::fs::write(&office_path, TEMPLATE_OFFICE_97);
+    }
+
+    let mut themes = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&themes_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("css") {
+                if let Some(id) = path.file_stem().and_then(|s| s.to_str()) {
+                    if let Ok(css_content) = std::fs::read_to_string(&path) {
+                        let name = parse_theme_name(&css_content, id);
+                        themes.push(CustomTheme {
+                            id: id.to_string(),
+                            name,
+                            css_content,
+                            file_path: path.to_string_lossy().into_owned(),
+                        });
+                    }
+                }
+            }
+        }
+    }
+    themes.sort_by(|a, b| a.id.cmp(&b.id));
+    Ok(themes)
+}
+
+#[tauri::command]
+fn open_themes_dir(app: tauri::AppHandle) -> Result<(), String> {
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let themes_dir = app_dir.join("themes");
+    if !themes_dir.exists() {
+        std::fs::create_dir_all(&themes_dir).map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&themes_dir)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&themes_dir)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&themes_dir)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+async fn import_theme_file(app: tauri::AppHandle) -> Result<Option<Vec<CustomTheme>>, String> {
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .add_filter("CSS Theme", &["css"])
+        .blocking_pick_file()
+    else {
+        return Ok(None);
+    };
+
+    let source_path = picked.into_path().map_err(|e| e.to_string())?;
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let themes_dir = app_dir.join("themes");
+    if !themes_dir.exists() {
+        std::fs::create_dir_all(&themes_dir).map_err(|e| e.to_string())?;
+    }
+
+    let file_name = source_path
+        .file_name()
+        .ok_or_else(|| "Invalid file name".to_string())?;
+    let dest_path = themes_dir.join(file_name);
+
+    std::fs::copy(&source_path, &dest_path).map_err(|e| e.to_string())?;
+
+    let themes = load_custom_themes(app)?;
+    Ok(Some(themes))
+}
+
+#[tauri::command]
+fn copy_builtin_theme_template(app: tauri::AppHandle, theme_id: String) -> Result<Vec<CustomTheme>, String> {
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let themes_dir = app_dir.join("themes");
+    if !themes_dir.exists() {
+        std::fs::create_dir_all(&themes_dir).map_err(|e| e.to_string())?;
+    }
+
+    let (filename, content) = match theme_id.as_str() {
+        "vol-de-nuit" => ("vol-de-nuit-custom.css", r#"/* Theme Name: 暗夜飛行 (自訂版) */
+html[data-theme="vol-de-nuit-custom"] {
+  --bg: #14161f;
+  --bg-panel: #1b1e2b;
+  --bg-inset: #10131d;
+  --fg: #e6e9f0;
+  --fg-strong: #e6e9f0;
+  --fg-muted: #8a93ad;
+  --accent: #e8b84b;
+  --accent-2: #7fd1c9;
+  --line: #2a2f42;
+  --font-ui: "JetBrains Mono", ui-monospace, monospace;
+  --font-edit: "JetBrains Mono", ui-monospace, "Noto Sans TC", monospace;
+  --font-preview: "Literata", "Noto Serif TC", serif;
+}
+"#),
+        "inkstone" => ("inkstone-custom.css", r#"/* Theme Name: 硯台 (自訂版) */
+html[data-theme="inkstone-custom"] {
+  --bg: #f5f2eb;
+  --bg-bar: #f1ede3;
+  --bg-panel: #f5f2eb;
+  --bg-inset: rgba(214, 209, 196, 0.32);
+  --fg: #1f1d1a;
+  --fg-strong: #3d3a33;
+  --fg-muted: #6b675e;
+  --accent: #3d3a33;
+  --accent-2: #6b675e;
+  --line: #d6d1c4;
+  --cinnabar: #b3402a;
+  --font-ui: "Space Mono", "Noto Sans TC", monospace;
+  --font-edit: "Martian Mono", "Noto Sans TC", monospace;
+  --font-preview: "Noto Sans TC", "PingFang TC", sans-serif;
+}
+"#),
+        _ => return Err("Unknown built-in theme template".to_string()),
+    };
+
+    let target_file = themes_dir.join(filename);
+    let _ = std::fs::write(target_file, content);
+
+    load_custom_themes(app)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -569,7 +904,11 @@ pub fn run() {
             pick_codex_root,
             load_locales,
             open_locales_dir,
-            delete_codex_folder
+            delete_codex_folder,
+            load_custom_themes,
+            open_themes_dir,
+            import_theme_file,
+            copy_builtin_theme_template
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

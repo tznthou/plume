@@ -68,4 +68,32 @@ describe("theme", () => {
     await theme.initTheme();
     expect(document.documentElement.dataset.theme).toBe("vol-de-nuit");
   });
+
+  it("test_custom_theme_style_injection_and_setTheme", async () => {
+    const theme = await loadThemeModule();
+    const custom = {
+      id: "emerald-forest",
+      name: "翠綠森林 (Emerald Forest)",
+      cssContent: 'html[data-theme="emerald-forest"] { --bg: #0d1b1e; }',
+      filePath: "/path/to/emerald-forest.css",
+    };
+
+    theme.injectCustomThemeStyles([custom]);
+    const styleEl = document.getElementById("plume-custom-themes");
+    expect(styleEl).not.toBeNull();
+    expect(styleEl?.textContent).toContain("emerald-forest");
+
+    await theme.setTheme("emerald-forest");
+    expect(document.documentElement.dataset.theme).toBe("emerald-forest");
+    expect(document.documentElement.dataset.themeChoice).toBe("emerald-forest");
+    expect(storeMocks.data.get("theme")).toBe("emerald-forest");
+  });
+
+  it("test_isBuiltinTheme", async () => {
+    const theme = await loadThemeModule();
+    expect(theme.isBuiltinTheme("vol-de-nuit")).toBe(true);
+    expect(theme.isBuiltinTheme("inkstone")).toBe(true);
+    expect(theme.isBuiltinTheme("auto")).toBe(true);
+    expect(theme.isBuiltinTheme("emerald-forest")).toBe(false);
+  });
 });
