@@ -258,6 +258,7 @@ onLanguageChange(() => {
   void rebuildMenu();
   clearShortcutsOverlay();
   refreshLangUI();
+  renderTabs();
 });
 
 void Promise.all([initI18n(), initTheme(), initReadingPrefs()]).then(() => {
@@ -375,41 +376,47 @@ window.addEventListener("keydown", (e) => {
 // ----- 分頁 UI 渲染與事件處理 -----
 
 const tabsListEl = document.querySelector<HTMLElement>("#tabs-list")!;
+tabsListEl.setAttribute("role", "tablist");
 
 function renderTabs(): void {
   const allTabs = getTabs();
   const activeId = getActiveTabId();
+  const hadFocus = tabsListEl.contains(document.activeElement);
 
+  tabsListEl.setAttribute("aria-label", t("ui.tabList"));
   tabsListEl.innerHTML = "";
 
   for (const tab of allTabs) {
+    const isActive = tab.id === activeId;
+    const name = tab.path ? (tab.path.split(/[/\\]/).pop() ?? tab.path) : t("ui.untitled");
+
     const tabEl = document.createElement("div");
     tabEl.className = "tab";
-    if (tab.id === activeId) {
-      tabEl.classList.add("active");
-    }
-    if (tab.dirty) {
-      tabEl.classList.add("dirty");
-    }
+    tabEl.setAttribute("role", "tab");
+    tabEl.setAttribute("aria-selected", String(isActive));
+    tabEl.setAttribute("tabindex", isActive ? "0" : "-1");
+    tabEl.setAttribute("aria-label", name + (tab.dirty ? ` (${t("ui.unsaved")})` : ""));
+    tabEl.dataset.tabId = tab.id;
+    if (isActive) tabEl.classList.add("active");
+    if (tab.dirty) tabEl.classList.add("dirty");
 
     const titleEl = document.createElement("span");
     titleEl.className = "tab-title";
-    const name = tab.path ? (tab.path.split(/[/\\]/).pop() ?? tab.path) : "未命名";
     titleEl.textContent = name;
     tabEl.appendChild(titleEl);
 
-    // 狀態點（未儲存時顯示）
     const statusEl = document.createElement("span");
     statusEl.className = "tab-status";
+    statusEl.setAttribute("aria-hidden", "true");
     tabEl.appendChild(statusEl);
 
-    // 關閉按鈕
-    const closeEl = document.createElement("span");
+    const closeEl = document.createElement("button");
     closeEl.className = "tab-close";
     closeEl.textContent = "✕";
-    closeEl.title = "關閉分頁";
+    closeEl.setAttribute("aria-label", t("ui.closeTab"));
+    closeEl.setAttribute("tabindex", "-1");
     closeEl.addEventListener("click", (e) => {
-      e.stopPropagation(); // 阻止點擊關閉按鈕觸發分頁切換
+      e.stopPropagation();
       void closeTab(tab.id);
     });
     tabEl.appendChild(closeEl);
@@ -420,7 +427,51 @@ function renderTabs(): void {
 
     tabsListEl.appendChild(tabEl);
   }
+
+  if (hadFocus) {
+    const activeTab = tabsListEl.querySelector<HTMLElement>('[aria-selected="true"]');
+    activeTab?.focus();
+  }
 }
+
+tabsListEl.addEventListener("keydown", (e) => {
+  const tabs = Array.from(tabsListEl.querySelectorAll<HTMLElement>('[role="tab"]'));
+  const current = document.activeElement as HTMLElement;
+  const idx = tabs.indexOf(current);
+  if (idx < 0) return;
+
+  let target: HTMLElement | undefined;
+  switch (e.key) {
+    case "ArrowRight":
+      target = tabs[(idx + 1) % tabs.length];
+      break;
+    case "ArrowLeft":
+      target = tabs[(idx - 1 + tabs.length) % tabs.length];
+      break;
+    case "Home":
+      target = tabs[0];
+      break;
+    case "End":
+      target = tabs[tabs.length - 1];
+      break;
+    case "Delete": {
+      const tabId = current.dataset.tabId;
+      if (tabId) void closeTab(tabId);
+      e.preventDefault();
+      return;
+    }
+    default:
+      return;
+  }
+  if (target && target !== current) {
+    current.setAttribute("tabindex", "-1");
+    target.setAttribute("tabindex", "0");
+    target.focus();
+    const tabId = target.dataset.tabId;
+    if (tabId) void selectTab(tabId);
+  }
+  e.preventDefault();
+});
 
 onTabsChange(renderTabs);
 
@@ -470,6 +521,6 @@ void listen<string[]>("file-open", (event) => {
   if (md) openExternalWithRefresh(md);
 });
 
-// 停用 WebView 原生右鍵選單（含「重新載入」）：本 app 無自訂選單可替代，
-// 誤按「重新載入」會讓 webview 整頁重載，記憶體中的 CM6 內容/DocState 全部消失變空白。
+// WebView 原生右鍵選單含「重新載入」，誤按會清空所有 CM6 記憶體內容。
+// app 無 beforeunload 守衛（onCloseRequested 只攔視窗關閉），全域攔截是唯一防線。
 document.addEventListener("contextmenu", (e) => e.preventDefault());

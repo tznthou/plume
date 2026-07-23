@@ -82,12 +82,12 @@ export function getDocState(): Readonly<{ path: string | null; dirty: boolean }>
 
 function fileName(): string {
   const active = getActiveTab();
-  if (active.path === null) return "未命名";
+  if (active.path === null) return t("ui.untitled");
   return active.path.split(/[/\\]/).pop() ?? active.path;
 }
 
 function fileNameForTab(tab: Tab): string {
-  if (tab.path === null) return "未命名";
+  if (tab.path === null) return t("ui.untitled");
   return tab.path.split(/[/\\]/).pop() ?? tab.path;
 }
 
@@ -205,7 +205,7 @@ async function saveTab(tab: Tab): Promise<boolean> {
   if (tab.path === null) {
     const target = await save({
       filters: MD_FILTERS,
-      defaultPath: tab.path ?? "未命名.md",
+      defaultPath: `${t("ui.untitled")}.md`,
     });
     if (target === null) return false;
     const ok = await writeToPath(tab, target);
@@ -217,6 +217,12 @@ async function saveTab(tab: Tab): Promise<boolean> {
 }
 
 async function writeToPath(tab: Tab, path: string): Promise<boolean> {
+  const collision = tabs.find((x) => x.id !== tab.id && x.path === path);
+  if (collision) {
+    const name = path.split(/[/\\]/).pop() ?? path;
+    await message(t("dialogs.pathCollisionMessage", { path: name }), { title: t("dialogs.pathCollisionTitle"), kind: "error" });
+    return false;
+  }
   try {
     const contentToSave = tab.id === activeTabId ? (getContent ? (getContent() || "") : "") : tab.content;
     await writeTextFile(path, contentToSave);
@@ -341,7 +347,7 @@ export async function saveAs(): Promise<boolean> {
   const active = getActiveTab();
   const target = await save({
     filters: MD_FILTERS,
-    defaultPath: active.path ?? "未命名.md",
+    defaultPath: active.path ?? `${t("ui.untitled")}.md`,
   });
   if (target === null) return false;
   const ok = await writeToPath(active, target);
