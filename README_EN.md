@@ -57,7 +57,9 @@ Plume splits reading and writing into three modes — Compose (immersive writing
 
 | Feature | What it does |
 |---------|--------------|
-| **Three-state theme** | Vol de Nuit (dark, default), Inkstone (light), and Auto (follows the system light/dark setting); your choice is remembered across restarts |
+| **Themes** | Built-in Vol de Nuit (dark), Inkstone (light), and Auto (follows system). Three custom theme templates ship out of the box: Emerald Forest, Nordic Frost, and Office 97 — the last one a faithful revival of raised buttons, pixel-art icons, and that blue title bar you forgot you missed |
+| **Custom themes** | Drop a CSS file into the `themes/` folder and it shows up as a new theme. The settings panel (gear icon) lets you switch instantly; the bundled templates are ready to remix |
+| **Settings panel** | One tap on the gear: theme selection, language, version info, and a one-click update checker, all in a single overlay |
 | **Reading font** | Default / Serif / Sans / Mono, with `⌘=` / `⌘-` / `⌘0` to adjust the size live (12–24px) |
 | **Native menu bar** | Plume / File / Edit / View / Help system-native menus |
 | **Shortcut cheat sheet** | `⌘/` brings up an overlay; key labels adapt to the platform (macOS `⌘` / Windows `Ctrl`) |
@@ -79,7 +81,7 @@ flowchart LR
     end
     subgraph Rust["Rust core (src-tauri)"]
         Plugins["official plugins<br/>dialog / fs / store<br/>persisted-scope / opener"]
-        Commands["custom commands<br/>grant_scope / get_opened_urls<br/>list_codex_files / pick_codex_root"]
+        Commands["custom commands<br/>grant_scope / get_opened_urls<br/>list_codex_files / pick_codex_root<br/>load_locales / open_locales_dir<br/>delete_codex_folder<br/>load_custom_themes / open_themes_dir<br/>import_theme_file<br/>copy_builtin_theme_template"]
     end
     Editor -- "onChange (debounce 50ms)" --> Renderer --> Preview
     UX -. "acts on editor / preview / document" .-> Pipeline
@@ -92,7 +94,7 @@ flowchart LR
     Commands -- "fs scope grant" --> Plugins
 ```
 
-**Design principle:** reading and writing as equals — files open into full-width reading (Read), picking up the pen switches to immersive writing (Compose), with Split in between for writing against the preview. Focus, typewriter, and live preview are all there in the writing modes. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, menu, TOC, Codex) that changes presentation without touching the data flow. Rust handles file I/O, dialogs, OS integration, and four custom commands: `grant_scope` (per-file fs-scope authorization for drag-drop and file-association paths, with symlink resolution and extension validation; also handles folder drops by discovering README.md), `get_opened_urls` (cold-start file paths from the OS), `list_codex_files` (a read-only recursive listing of a Codex folder's `.md` files — returns paths only and never opens a directory fs scope; "can list a directory" is not "can read its contents," so clicking a file still goes through per-file `grant_scope` and the load-bearing wall stays intact), and `pick_codex_root` (Codex root authorization — a native folder dialog owned by Rust; the selected path is canonicalized before joining an approved-roots allowlist, so the frontend cannot inject arbitrary paths).
+**Design principle:** reading and writing as equals — files open into full-width reading (Read), picking up the pen switches to immersive writing (Compose), with Split in between for writing against the preview. Focus, typewriter, and live preview are all there in the writing modes. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, menu, TOC, Codex) that changes presentation without touching the data flow. Rust handles file I/O, dialogs, OS integration, and eleven custom commands — two for file operations (`grant_scope` per-file path authorization, `get_opened_urls` cold-start paths), three for Codex (`pick_codex_root` folder authorization, `list_codex_files` read-only listing, `delete_codex_folder` allowlist removal), two for i18n (`load_locales` locale pack loading, `open_locales_dir` open locales folder), and four for theming (`load_custom_themes` load custom themes with CSS sanitization, `open_themes_dir` open themes folder, `import_theme_file` import a theme file, `copy_builtin_theme_template` copy a built-in template).
 
 ## Tech stack
 
@@ -109,7 +111,7 @@ flowchart LR
 | mermaid | 11.x | Diagram rendering (lazy-loaded, `securityLevel: "strict"`) |
 | DOMPurify | 3.x | XSS sanitization of rendered output (non-negotiable, see SPEC) |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
-| Vitest | 4.x | Unit tests (65 of them, rendering pipeline and Codex tree-building) |
+| Vitest | 4.x | Unit tests (81 of them — rendering pipeline, Codex tree, themes, settings) |
 
 > Front matter hiding uses a regex strip ahead of `render()` rather than `markdown-it-front-matter` — that package has an edge case where a document starting with `---` but never closing it gets swallowed whole.
 
@@ -161,7 +163,9 @@ markdown-tool/
 │   ├── file.ts             # open/save/save-as/HTML export, document state (path, dirty)
 │   ├── recent.ts           # recent files (plugin-store)
 │   ├── codex.ts            # Codex: read-only folder listing + nested file tree + multi-codex switching
-│   ├── theme.ts            # three-state theme (Vol de Nuit/Inkstone/Auto), matchMedia listener
+│   ├── theme.ts            # themes (Vol de Nuit/Inkstone/Auto + custom), matchMedia listener
+│   ├── settings.ts         # settings panel: theme picker, update checker, version display
+│   ├── i18n.ts             # i18n: locale loading, live switching, DOM translation
 │   ├── reading-prefs.ts    # reading font & size preferences (plugin-store persisted)
 │   ├── focus-mode.ts       # focus mode: spotlight the cursor's paragraph, fade the rest
 │   ├── typewriter.ts       # typewriter mode: pin the cursor line to screen center
@@ -192,6 +196,8 @@ See the [CHANGELOG](CHANGELOG_EN.md) for the version history.
 | Item | Status |
 |------|--------|
 | Apple notarization + auto-update | Planned |
+| Custom themes | v0.13.0 ✓ |
+| Settings panel + update checker | v0.13.0 ✓ |
 | PDF export | v0.10.0 ✓ |
 
 ---
