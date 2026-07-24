@@ -7,7 +7,7 @@
 
 [中文](README.md)
 
-A desktop Markdown tool that opens straight into reading and gets out of the way when you write. Other people's `.md` files render into a full-width reading view; your own get a focus mode, typewriter scrolling, KaTeX math, and mermaid diagrams. A native Tauri 2 app — light, no account, no plugin ecosystem.
+A desktop Markdown tool that opens straight into reading and gets out of the way when you write. Other people's `.md` files render into a full-width reading view; your own get multi-tab editing, a focus mode, typewriter scrolling, KaTeX math, and mermaid diagrams. A native Tauri 2 app — no account, extend themes and languages by dropping a CSS or JSON file, no plugin marketplace.
 
 <p align="center">
   <img src="docs/images/screenshot-dark.webp" alt="Plume Vol de Nuit theme screenshot" width="720" />
@@ -33,13 +33,15 @@ Plume splits reading and writing into three modes — Compose (immersive writing
 
 | Feature | What it does |
 |---------|--------------|
+| **Multi-tab editing** | Open several `.md` files at once — tab switching, closing, dirty-state indicators (dot). Each tab keeps its own undo/redo stack, cursor position, and selection; switching away and back never loses edit history. Closing the window confirms each unsaved tab individually |
 | **CodeMirror 6 editor** | Line numbers, Markdown syntax highlighting, search & replace, undo/redo; CJK input methods tested — composition never breaks mid-character |
 | **Live preview** | In Split, the preview updates within 50ms of typing |
+| **Context menu** | Right-click in the editor: Cut/Copy/Paste/Select All. Right-click in the preview: Copy/Select All. Replaces the native context menu and blocks the browser Reload that would destroy in-memory content |
 | **Focus mode** `⌘⇧F` | Only the paragraph under the cursor stays fully visible; the rest fades out. Paragraph boundaries follow blank lines and track the cursor as it moves; available in Compose only |
 | **Typewriter mode** `⌘T` | The cursor line stays pinned to the vertical center of the screen while text scrolls up; even the top of the document can be centered — a Compose-only tool |
 | **Copy as HTML** `⌘⇧C` | Renders the Markdown to HTML on the clipboard, ready to paste into a CMS or blog's HTML editor; math is converted to MathML automatically |
 | **HTML export** | Produces a single self-styled `.html` that renders exactly like the preview |
-| **PDF export** `⌘P` | File ▸ Export PDF uses the native macOS print dialog to produce a vector PDF — text is selectable, searchable, and copyable, with zero external dependencies |
+| **PDF export** `⌘P` | File ▸ Export PDF uses the native macOS print dialog to produce a vector PDF — text is selectable, searchable, and copyable, Mermaid diagrams render as SVG, zero external dependencies |
 
 ### Rendering
 
@@ -50,6 +52,7 @@ Plume splits reading and writing into three modes — Compose (immersive writing
 | **Mermaid diagrams** | ` ```mermaid ` blocks render live as SVG — flowchart, sequence, class, ER, Gantt and more, with theme-matched colors (lazy-loaded; files without diagrams pay nothing) |
 | **KaTeX math** | Inline `$...$` and display `$$...$$` math, lazy-loaded — files without math never load KaTeX |
 | **Footnotes** | `[^1]` footnote syntax, with a footnote section auto-generated at the bottom of the preview and click-to-jump references |
+| **Local image preview** | Relative image paths in Markdown render in the preview pane, loaded securely via the Tauri asset protocol |
 | **Front matter hiding** | YAML front matter (fenced by `---`) never shows up in the preview |
 | **Safe rendering** | Every render passes through DOMPurify — opening someone else's `.md` with a stray `<script>` is a non-event |
 
@@ -57,8 +60,9 @@ Plume splits reading and writing into three modes — Compose (immersive writing
 
 | Feature | What it does |
 |---------|--------------|
-| **Themes** | Built-in Vol de Nuit (dark), Inkstone (light), and Auto (follows system). Three custom theme templates ship out of the box: Emerald Forest, Nordic Frost, and Office 97 — the last one a faithful revival of raised buttons, pixel-art icons, and that blue title bar you forgot you missed |
-| **Custom themes** | Drop a CSS file into the `themes/` folder and it shows up as a new theme. The settings panel (gear icon) lets you switch instantly; the bundled templates are ready to remix |
+| **Themes** | Built-in Vol de Nuit (dark), Inkstone (light), Office 97 (retro), and Auto (follows system). Office 97 is a faithful revival of raised buttons, pixel-art icons, and that blue title bar you forgot you missed |
+| **Custom themes** | Drop a CSS file into the `themes/` folder and it becomes a new theme. The settings panel lets you switch instantly; three bundled templates (Emerald Forest, Nordic Frost, Office 97) are ready to remix |
+| **Multi-language** | Ships with Traditional Chinese and English. The language selector switches the entire UI live — toolbar, native menus, dialogs, shortcut overlay, and status bar. Drop a JSON file into `locales/` to add a new language |
 | **Settings panel** | One tap on the gear: theme selection, language, version info, and a one-click update checker, all in a single overlay |
 | **Reading font** | Default / Serif / Sans / Mono, with `⌘=` / `⌘-` / `⌘0` to adjust the size live (12–24px) |
 | **Native menu bar** | Plume / File / Edit / View / Help system-native menus |
@@ -74,8 +78,8 @@ flowchart LR
             Renderer["renderer.ts<br/>markdown-it + hljs<br/>+ DOMPurify"]
             Preview["preview.ts<br/>preview updates / synced scroll<br/>mermaid / KaTeX lazy load"]
         end
-        UX["experience layer<br/>theme (three-state)<br/>reading-prefs (font/size)<br/>focus-mode / typewriter<br/>menu / shortcuts / toc"]
-        File["file.ts<br/>open / save / export<br/>document state (path / dirty)"]
+        UX["experience layer<br/>theme (four-state)<br/>reading-prefs (font/size)<br/>focus-mode / typewriter<br/>i18n (multi-language)<br/>menu / shortcuts / toc / context-menu"]
+        File["file.ts<br/>open / save / export<br/>multi-tab management / document state"]
         Recent["recent.ts<br/>recent files"]
         Codex["codex.ts<br/>Codex: folder file tree"]
     end
@@ -94,7 +98,7 @@ flowchart LR
     Commands -- "fs scope grant" --> Plugins
 ```
 
-**Design principle:** reading and writing as equals — files open into full-width reading (Read), picking up the pen switches to immersive writing (Compose), with Split in between for writing against the preview. Focus, typewriter, and live preview are all there in the writing modes. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, menu, TOC, Codex) that changes presentation without touching the data flow. Rust handles file I/O, dialogs, OS integration, and eleven custom commands — two for file operations (`grant_scope` per-file path authorization, `get_opened_urls` cold-start paths), three for Codex (`pick_codex_root` folder authorization, `list_codex_files` read-only listing, `delete_codex_folder` allowlist removal), two for i18n (`load_locales` locale pack loading, `open_locales_dir` open locales folder), and four for theming (`load_custom_themes` load custom themes with CSS sanitization, `open_themes_dir` open themes folder, `import_theme_file` import a theme file, `copy_builtin_theme_template` copy a built-in template).
+**Design principle:** reading and writing as equals — files open into full-width reading (Read), picking up the pen switches to immersive writing (Compose), with Split in between for writing against the preview. Focus, typewriter, and live preview are all there in the writing modes. Multiple tabs let you keep several documents open and switch between them; each tab carries its own undo/redo and cursor, so nothing is lost on a round-trip. The entire Markdown pipeline stays in the frontend (synchronous, zero IPC, zero race conditions), with mermaid and KaTeX as lazy-loaded post-processing. Wrapped around that spine is an experience layer (theme, font, focus/typewriter, i18n, menu, TOC, Codex) that changes presentation without touching the data flow. Extensibility takes the lightest path — drop a CSS file for a new theme, drop a JSON file for a new language, no plugin API or marketplace needed. Rust handles file I/O, dialogs, OS integration, and eleven custom commands — two for file operations (`grant_scope` per-file path authorization, `get_opened_urls` cold-start paths), three for Codex (`pick_codex_root` folder authorization, `list_codex_files` read-only listing, `delete_codex_folder` allowlist removal), two for i18n (`load_locales` locale pack loading, `open_locales_dir` open locales folder), and four for theming (`load_custom_themes` load custom themes with CSS sanitization, `open_themes_dir` open themes folder, `import_theme_file` import a theme file, `copy_builtin_theme_template` copy a built-in template).
 
 ## Tech stack
 
@@ -171,8 +175,9 @@ markdown-tool/
 │   ├── typewriter.ts       # typewriter mode: pin the cursor line to screen center
 │   ├── menu.ts             # native menu bar (@tauri-apps/api/menu, built in JS)
 │   ├── shortcuts.ts        # keyboard shortcut overlay (cheat sheet)
+│   ├── context-menu.ts     # context menu: editor/preview with tailored actions
 │   ├── statusbar.ts        # status bar: word/line count, render time, unsaved indicator
-│   └── style.css           # layout + dual themes + Compose/Split/Read modes + preview typography
+│   └── style.css           # layout + four themes + Compose/Split/Read modes + preview typography
 ├── src-tauri/              # Rust core
 │   ├── src/lib.rs          # Tauri bootstrap + plugins + custom commands
 │   ├── capabilities/       # IPC permission declarations (least privilege)
