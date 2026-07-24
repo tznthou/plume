@@ -1,5 +1,5 @@
 // 檔案操作與文件狀態（SPEC「模組職責」「資料模型」「錯誤處理標準」）。
-// 內容唯一真相來源是 CM6 EditorState：讀走 getContent()、寫走 setContent()，
+// 內容唯一真相來源是 CM6 EditorState，每個 tab 各自持有獨立的 EditorState（含 undo history）。
 // 此處只維護 path/dirty。匯出 HTML 於 Task 7 加入。
 import { invoke } from "@tauri-apps/api/core";
 import { ask, message, open, save } from "@tauri-apps/plugin-dialog";
@@ -7,9 +7,11 @@ import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import DOMPurify from "dompurify";
 import hljsThemeCss from "highlight.js/styles/github.css?raw";
-import { getContent, setContent, getScrollDOM } from "./editor";
+import type { EditorState } from "@codemirror/state";
+import { getContent, getScrollDOM, getEditorState, restoreEditorState, createEditorState } from "./editor";
 import { escapeHtml, render } from "./renderer";
 import { addRecent, removeRecent } from "./recent";
+import { invalidateMermaidTheme } from "./preview";
 import { t } from "./i18n";
 
 export interface Tab {
@@ -18,6 +20,7 @@ export interface Tab {
   dirty: boolean;
   content: string;
   scrollPos: number;
+  editorState: EditorState | null;
 }
 
 const MD_FILTERS = [{ name: "Markdown", extensions: ["md", "markdown"] }];
@@ -34,6 +37,7 @@ function createTab(path: string | null = null, content: string = "", dirty: bool
     dirty,
     content,
     scrollPos: 0,
+    editorState: null,
   };
 }
 
@@ -82,12 +86,12 @@ export function getDocState(): Readonly<{ path: string | null; dirty: boolean }>
 
 function fileName(): string {
   const active = getActiveTab();
-  if (active.path === null) return "未命名";
+  if (active.path === null) return t("ui.untitled");
   return active.path.split(/[/\\]/).pop() ?? active.path;
 }
 
 function fileNameForTab(tab: Tab): string {
-  if (tab.path === null) return "未命名";
+  if (tab.path === null) return t("ui.untitled");
   return tab.path.split(/[/\\]/).pop() ?? tab.path;
 }
 
@@ -107,33 +111,32 @@ export function markDirty(): void {
   notifyTabsChange();
 }
 
-function loadContent(text: string): void {
+function saveCurrentTabState(): void {
+  const current = getActiveTab();
+  current.editorState = getEditorState();
+  current.content = getContent();
+  current.scrollPos = getScrollDOM().scrollTop;
+}
+
+function restoreTabEditorState(state: EditorState): void {
   suppressDirty = true;
   try {
-    setContent(text);
+    restoreEditorState(state);
   } finally {
     suppressDirty = false;
   }
 }
 
-// Select a tab and restore content and scroll position
-// Select a tab and restore content and scroll position
 export async function selectTab(id: string): Promise<void> {
   if (id === activeTabId) return;
-  const current = getActiveTab();
-  if (current) {
-    current.content = getContent ? (getContent() || "") : "";
-    const scrollDom = getScrollDOM ? getScrollDOM() : null;
-    current.scrollPos = scrollDom ? scrollDom.scrollTop : 0;
-  }
+  saveCurrentTabState();
 
   activeTabId = id;
   const target = getActiveTab();
   if (target) {
-    loadContent(target.content);
+    restoreTabEditorState(target.editorState ?? createEditorState(target.content));
     requestAnimationFrame(() => {
-      const scrollDom = getScrollDOM ? getScrollDOM() : null;
-      if (scrollDom) scrollDom.scrollTop = target.scrollPos;
+      getScrollDOM().scrollTop = target.scrollPos;
     });
     await updateTitle();
   }
@@ -147,9 +150,7 @@ export async function closeTab(id: string): Promise<boolean> {
 
   const tabToClose = tabs[index];
   if (id === activeTabId) {
-    tabToClose.content = getContent ? (getContent() || "") : "";
-    const scrollDom = getScrollDOM ? getScrollDOM() : null;
-    tabToClose.scrollPos = scrollDom ? scrollDom.scrollTop : 0;
+    tabToClose.content = getContent();
   }
 
   if (tabToClose.dirty) {
@@ -178,17 +179,16 @@ export async function closeTab(id: string): Promise<boolean> {
     const newTab = createTab();
     tabs.push(newTab);
     activeTabId = newTab.id;
-    loadContent("");
+    restoreTabEditorState(createEditorState(""));
     await updateTitle();
     loadListener?.("new");
   } else if (id === activeTabId) {
     const nextActiveIndex = Math.min(index, tabs.length - 1);
     const targetTab = tabs[nextActiveIndex];
     activeTabId = targetTab.id;
-    loadContent(targetTab.content);
+    restoreTabEditorState(targetTab.editorState ?? createEditorState(targetTab.content));
     requestAnimationFrame(() => {
-      const scrollDom = getScrollDOM ? getScrollDOM() : null;
-      if (scrollDom) scrollDom.scrollTop = targetTab.scrollPos;
+      getScrollDOM().scrollTop = targetTab.scrollPos;
     });
     await updateTitle();
     loadListener?.("open");
@@ -200,12 +200,12 @@ export async function closeTab(id: string): Promise<boolean> {
 
 async function saveTab(tab: Tab): Promise<boolean> {
   if (tab.id === activeTabId) {
-    tab.content = getContent ? (getContent() || "") : "";
+    tab.content = getContent();
   }
   if (tab.path === null) {
     const target = await save({
       filters: MD_FILTERS,
-      defaultPath: tab.path ?? "未命名.md",
+      defaultPath: `${t("ui.untitled")}.md`,
     });
     if (target === null) return false;
     const ok = await writeToPath(tab, target);
@@ -217,8 +217,14 @@ async function saveTab(tab: Tab): Promise<boolean> {
 }
 
 async function writeToPath(tab: Tab, path: string): Promise<boolean> {
+  const collision = tabs.find((x) => x.id !== tab.id && x.path === path);
+  if (collision) {
+    const name = path.split(/[/\\]/).pop() ?? path;
+    await message(t("dialogs.pathCollisionMessage", { path: name }), { title: t("dialogs.pathCollisionTitle"), kind: "error" });
+    return false;
+  }
   try {
-    const contentToSave = tab.id === activeTabId ? (getContent ? (getContent() || "") : "") : tab.content;
+    const contentToSave = tab.id === activeTabId ? getContent() : tab.content;
     await writeTextFile(path, contentToSave);
     try {
       await invoke("grant_scope", { path });
@@ -256,18 +262,13 @@ async function confirmLoseChangesForTab(tab: Tab): Promise<boolean> {
 }
 
 export async function newFile(): Promise<void> {
-  const active = getActiveTab();
-  if (active) {
-    active.content = getContent ? (getContent() || "") : "";
-    const scrollDom = getScrollDOM ? getScrollDOM() : null;
-    active.scrollPos = scrollDom ? scrollDom.scrollTop : 0;
-  }
+  saveCurrentTabState();
 
   const newTab = createTab();
   tabs.push(newTab);
   activeTabId = newTab.id;
 
-  loadContent("");
+  restoreTabEditorState(createEditorState(""));
   await updateTitle();
   loadListener?.("new");
   notifyTabsChange();
@@ -299,28 +300,23 @@ export async function openFileInTab(path: string, kind: LoadKind = "open"): Prom
   try {
     const content = await readTextFile(path);
     const current = getActiveTab();
-    const currentContent = getContent ? (getContent() || "") : "";
+    const currentContent = getContent();
 
     if (current && current.path === null && !current.dirty && current.content === "" && currentContent === "") {
-      // Reuse current tab
       current.path = path;
       current.content = content;
       current.dirty = false;
-      loadContent(content);
+      current.editorState = null;
+      restoreTabEditorState(createEditorState(content));
       await updateTitle();
       await addRecent(path);
       loadListener?.(kind);
     } else {
-      // Create new tab
-      if (current) {
-        current.content = currentContent;
-        const scrollDom = getScrollDOM ? getScrollDOM() : null;
-        current.scrollPos = scrollDom ? scrollDom.scrollTop : 0;
-      }
+      saveCurrentTabState();
       const newTab = createTab(path, content, false);
       tabs.push(newTab);
       activeTabId = newTab.id;
-      loadContent(content);
+      restoreTabEditorState(createEditorState(content));
       await updateTitle();
       await addRecent(path);
       loadListener?.(kind);
@@ -341,7 +337,7 @@ export async function saveAs(): Promise<boolean> {
   const active = getActiveTab();
   const target = await save({
     filters: MD_FILTERS,
-    defaultPath: active.path ?? "未命名.md",
+    defaultPath: active.path ?? `${t("ui.untitled")}.md`,
   });
   if (target === null) return false;
   const ok = await writeToPath(active, target);
@@ -462,6 +458,25 @@ export async function exportHtml(): Promise<void> {
   }
 }
 
+async function renderMermaidForExport(container: HTMLElement): Promise<void> {
+  const nodes = container.querySelectorAll<HTMLElement>("pre.mermaid");
+  if (nodes.length === 0) return;
+
+  const mermaid = (await import("mermaid")).default;
+  mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "default" });
+  try {
+    await mermaid.run({ nodes });
+  } catch (err) {
+    console.warn("[mermaid export]", err);
+  }
+  invalidateMermaidTheme();
+
+  for (const el of container.querySelectorAll<HTMLElement>("pre.mermaid")) {
+    const clean = el.cloneNode(true) as HTMLElement;
+    el.replaceChildren(...clean.childNodes);
+  }
+}
+
 let printing = false;
 
 export async function exportPdf(): Promise<void> {
@@ -475,6 +490,7 @@ export async function exportPdf(): Promise<void> {
     container.innerHTML =
       `<style>@media print {\n${EXPORT_TYPOGRAPHY_CSS}\n${hljsThemeCss}\n}</style>${bodyHtml}`;
     document.body.appendChild(container);
+    await renderMermaidForExport(container);
     await invoke("plugin:webview|print");
   } catch (e) {
     document.getElementById("print-container")?.remove();
@@ -508,6 +524,7 @@ export async function initFileModule(): Promise<void> {
     const active = getActiveTab();
     if (active) {
       active.content = getContent();
+      active.editorState = getEditorState();
     }
     const dirtyTabs = tabs.filter((t) => t.dirty);
     if (dirtyTabs.length === 0) return;

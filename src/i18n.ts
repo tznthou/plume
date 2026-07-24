@@ -68,7 +68,10 @@ let allLocales: Record<string, any> = {
       openThemesFolder: "開啟佈景主題資料夾",
       importTheme: "複製/匯入佈景主題…",
       copyBuiltinTheme: "複製內建主題為範本",
-      customThemesGroup: "自訂主題"
+      customThemesGroup: "自訂主題",
+      tabList: "分頁列",
+      closeTab: "關閉分頁",
+      untitled: "未命名"
     },
     dialogs: {
       openCodexErrorTitle: "開啟冊失敗",
@@ -100,7 +103,9 @@ let allLocales: Record<string, any> = {
       exportFailedMessage: "匯出失敗：{error}",
       exportPdfFailedTitle: "匯出失敗",
       exportPdfFailedMessage: "匯出 PDF 失敗：{error}",
-      renderErrorMessage: "渲染發生錯誤（下次輸入會自動重試）：{error}"
+      renderErrorMessage: "渲染發生錯誤（下次輸入會自動重試）：{error}",
+      pathCollisionTitle: "無法儲存",
+      pathCollisionMessage: "「{path}」已在其他分頁開啟，請先關閉該分頁或選擇其他位置。"
     },
     menu: {
       file: "檔案",
@@ -137,6 +142,7 @@ let allLocales: Record<string, any> = {
       read: "Read",
       themeVolDeNuit: "暗夜飛行",
       themeInkstone: "硯台",
+      themeOffice97: "Office 97",
       themeAuto: "自動",
       fontDefault: "預設",
       fontSerif: "襯線體",
@@ -223,7 +229,10 @@ let allLocales: Record<string, any> = {
       openThemesFolder: "Open Themes Folder",
       importTheme: "Copy/Import Theme File…",
       copyBuiltinTheme: "Copy Built-in Theme Template",
-      customThemesGroup: "Custom Themes"
+      customThemesGroup: "Custom Themes",
+      tabList: "Tab list",
+      closeTab: "Close tab",
+      untitled: "Untitled"
     },
     dialogs: {
       openCodexErrorTitle: "Open Codex Failed",
@@ -255,7 +264,9 @@ let allLocales: Record<string, any> = {
       exportFailedMessage: "Export failed: {error}",
       exportPdfFailedTitle: "Export Failed",
       exportPdfFailedMessage: "Export PDF failed: {error}",
-      renderErrorMessage: "Render error (will retry automatically on next input): {error}"
+      renderErrorMessage: "Render error (will retry automatically on next input): {error}",
+      pathCollisionTitle: "Cannot Save",
+      pathCollisionMessage: "\"{path}\" is already open in another tab. Close that tab first or choose a different location."
     },
     menu: {
       file: "File",
@@ -292,6 +303,7 @@ let allLocales: Record<string, any> = {
       read: "Read",
       themeVolDeNuit: "Night Flight",
       themeInkstone: "Inkstone",
+      themeOffice97: "Office 97",
       themeAuto: "Auto",
       fontDefault: "Default",
       fontSerif: "Serif",

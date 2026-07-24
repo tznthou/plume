@@ -20,6 +20,10 @@ function getMermaid(): Promise<typeof import("mermaid").default> {
   return mermaidPromise;
 }
 
+export function invalidateMermaidTheme(): void {
+  lastMermaidTheme = undefined;
+}
+
 async function renderMermaid(gen: number): Promise<void> {
   if (!container!.querySelector("pre.mermaid")) return;
 

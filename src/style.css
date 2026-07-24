@@ -514,15 +514,20 @@ html[data-theme="inkstone"] #recent-list {
   z-index: 2;
 }
 
-/* Close button and dirty status */
+/* Close button (button element reset + styling) */
 .tab-close {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 14px;
   height: 14px;
+  border: none;
   border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  font: inherit;
   font-size: 9px;
+  line-height: 1;
   color: var(--fg-muted);
   cursor: pointer;
   opacity: 0;
@@ -2001,4 +2006,49 @@ html[data-theme="inkstone"] .settings-card {
   #print-container table, #print-container img {
     break-inside: avoid;
   }
+}
+
+/* ── Context menu ──────────────────────────────────── */
+.context-menu {
+  position: fixed;
+  z-index: 9999;
+  display: none;
+  min-width: 160px;
+  padding: 4px 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: var(--font-ui);
+  font-size: 13px;
+}
+.context-menu.visible { display: block; }
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: default;
+  gap: 24px;
+}
+.context-menu-item:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--bg);
+}
+.context-menu-item:disabled {
+  color: var(--fg-muted);
+  opacity: 0.5;
+}
+.context-menu-shortcut {
+  color: var(--fg-muted);
+  font-size: 12px;
+}
+.context-menu-item:hover:not(:disabled) .context-menu-shortcut {
+  color: inherit;
 }

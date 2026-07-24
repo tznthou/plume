@@ -14,9 +14,11 @@ const fsMocks = vi.hoisted(() => ({
 }));
 const editorMocks = vi.hoisted(() => ({
   getContent: vi.fn(),
-  setContent: vi.fn(),
   onChange: vi.fn(),
   getScrollDOM: vi.fn().mockReturnValue({ scrollTop: 0 }),
+  getEditorState: vi.fn().mockReturnValue({}),
+  restoreEditorState: vi.fn(),
+  createEditorState: vi.fn().mockReturnValue({}),
 }));
 const windowMocks = vi.hoisted(() => ({
   setTitle: vi.fn(),
@@ -59,7 +61,7 @@ describe("file", () => {
     const file = await loadFileModule();
     await file.openFile();
 
-    expect(editorMocks.setContent).toHaveBeenCalledWith("# 哈囉");
+    expect(editorMocks.createEditorState).toHaveBeenCalledWith("# 哈囉");
     expect(file.getDocState()).toEqual({ path: "/tmp/a.md", dirty: false });
     expect(windowMocks.setTitle).toHaveBeenCalledWith("a.md");
     expect(recentMocks.addRecent).toHaveBeenCalledWith("/tmp/a.md"); // Task 6：開啟成功記錄
@@ -105,14 +107,14 @@ describe("file", () => {
 
     const file = await loadFileModule();
     await file.openFile();
-    expect(editorMocks.setContent).toHaveBeenCalledTimes(1);
+    expect(editorMocks.restoreEditorState).toHaveBeenCalledTimes(1);
 
     dialogMocks.open.mockResolvedValue("/tmp/broken.md");
     fsMocks.readTextFile.mockRejectedValue(new Error("EACCES"));
     await file.openFile();
 
     // SPEC 錯誤處理：不載入、不改變現有編輯內容，非阻斷提示
-    expect(editorMocks.setContent).toHaveBeenCalledTimes(1);
+    expect(editorMocks.restoreEditorState).toHaveBeenCalledTimes(1);
     expect(file.getDocState()).toEqual({ path: "/tmp/a.md", dirty: false });
     expect(dialogMocks.message).toHaveBeenCalledOnce();
   });
@@ -124,7 +126,7 @@ describe("file", () => {
     await file.openRecent("/tmp/gone.md"); // 最近清單點到已刪除的檔
 
     // SPEC 錯誤處理：非阻斷提示 + 自動從最近清單移除，現有文件不受影響
-    expect(editorMocks.setContent).not.toHaveBeenCalled();
+    expect(editorMocks.restoreEditorState).not.toHaveBeenCalled();
     expect(file.getDocState()).toEqual({ path: null, dirty: false });
     expect(dialogMocks.message).toHaveBeenCalledOnce();
     expect(recentMocks.removeRecent).toHaveBeenCalledWith("/tmp/gone.md");
@@ -140,7 +142,7 @@ describe("file", () => {
     expect(coreMocks.invoke).toHaveBeenCalledWith("grant_scope", {
       path: "/tmp/dragged.md",
     });
-    expect(editorMocks.setContent).toHaveBeenCalledWith("# 拖曳開啟");
+    expect(editorMocks.createEditorState).toHaveBeenCalledWith("# 拖曳開啟");
     expect(file.getDocState()).toEqual({ path: "/real/dragged.md", dirty: false });
     expect(recentMocks.addRecent).toHaveBeenCalledWith("/real/dragged.md");
   });
@@ -172,7 +174,7 @@ describe("file", () => {
 
     expect(dialogMocks.message).toHaveBeenCalledOnce();
     expect(fsMocks.readTextFile).not.toHaveBeenCalled();
-    expect(editorMocks.setContent).not.toHaveBeenCalled();
+    expect(editorMocks.restoreEditorState).not.toHaveBeenCalled();
   });
 
   it("test_file_openExternal_codexKind_firesCodexLoad", async () => {
@@ -186,7 +188,7 @@ describe("file", () => {
 
     // 決策 1：冊點檔走 "codex" kind，main 的 onLoad 據此停在當前模式（不切閱）
     expect(loadSpy).toHaveBeenCalledWith("codex");
-    expect(editorMocks.setContent).toHaveBeenCalledWith("# 冊內文章");
+    expect(editorMocks.createEditorState).toHaveBeenCalledWith("# 冊內文章");
   });
 
   it("test_file_openExternal_defaultKind_firesOpen", async () => {

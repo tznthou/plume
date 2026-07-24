@@ -34,7 +34,7 @@ export function getCustomThemes(): CustomTheme[] {
 }
 
 export function isBuiltinTheme(name: string): boolean {
-  return name === "vol-de-nuit" || name === "inkstone" || name === "auto";
+  return name === "vol-de-nuit" || name === "inkstone" || name === "office-97" || name === "auto";
 }
 
 export function injectCustomThemeStyles(themes: CustomTheme[]): void {
