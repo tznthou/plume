@@ -6,6 +6,27 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-07-24
+
+### Added
+
+- Per-tab editor history: each tab retains its own undo/redo stack, cursor position, and selection — switching away and back never loses edit history
+- Context menu: right-click in the editor offers Cut/Copy/Paste/Select All; right-click in the preview offers Copy/Select All. Replaces the previous "disable native context menu" approach while still preventing the browser Reload that would destroy in-memory content
+- Mermaid diagram PDF export: PDF export now lazy-loads mermaid to render diagrams as SVG instead of exporting raw source text
+- Office 97 theme in menu: the built-in theme menu now includes Office 97, with full i18n support
+
+### Fixed
+
+- Preview/TOC/stats not updating after tab switch: `EditorView.setState()` does not trigger CM6 updateListener — added manual changeListeners firing
+- Focus/Typewriter mode consistency across tabs: dimming state and menu checkbox stay in sync after tab switches
+
+## [0.13.1] - 2026-07-23
+
+### Fixed
+
+- Office 97 theme export dropdown layout misalignment
+- Missing TOC button SVG icon
+
 ## [0.13.0] - 2026-07-23
 
 ### Added
