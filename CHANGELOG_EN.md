@@ -6,6 +6,8 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-07-26
+
 ### Added
 
 - Tab hotkeys: `⌘⇧[` / `⌘⇧]` cycle through tabs, `⌘W` closes the current one, and a new Tabs menu carries them. Tabs were previously mouse-only unless you first moved focus to the tab strip — while writing, focus lives in the editor, so there was no keyboard route at all
