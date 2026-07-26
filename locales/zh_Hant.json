@@ -125,6 +125,10 @@
     "toc": "目錄",
     "fullscreen": "全螢幕閱讀",
     "copyHtml": "複製為 HTML",
+    "tabs": "分頁",
+    "prevTab": "上一個分頁",
+    "nextTab": "下一個分頁",
+    "closeTab": "關閉分頁",
     "help": "輔助說明",
     "shortcuts": "鍵盤快捷鍵",
     "compose": "Compose",
@@ -146,6 +150,7 @@
     "save": "儲存",
     "saveAs": "另存新檔",
     "exportPdf": "匯出 PDF",
+    "tabGroup": "分頁",
     "viewGroup": "檢視",
     "toggleEditRead": "切換編輯／閱讀",
     "fontGroup": "字型",
@@ -156,6 +161,6 @@
     "copyHtml": "複製為 HTML",
     "exitFullscreen": "退出全螢幕",
     "shortcutsTip": "快捷鍵提示",
-    "overlayTitle": "Keyboard Shortcuts"
+    "overlayTitle": "鍵盤快捷鍵"
   }
 }

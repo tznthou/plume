@@ -33,7 +33,7 @@ Plume splits reading and writing into three modes — Compose (immersive writing
 
 | Feature | What it does |
 |---------|--------------|
-| **Multi-tab editing** | Open several `.md` files at once — tab switching, closing, dirty-state indicators (dot). Each tab keeps its own undo/redo stack, cursor position, and selection; switching away and back never loses edit history. Closing the window confirms each unsaved tab individually |
+| **Multi-tab editing** | Open several `.md` files at once — tab switching, closing, dirty-state indicators (dot). Each tab keeps its own undo/redo stack, cursor position, and selection; switching away and back never loses edit history. `⌘⇧[` / `⌘⇧]` cycle through tabs and `⌘W` closes the current one, so writing never has to reach for the mouse. Closing the window confirms each unsaved tab individually |
 | **CodeMirror 6 editor** | Line numbers, Markdown syntax highlighting, search & replace, undo/redo; CJK input methods tested — composition never breaks mid-character |
 | **Live preview** | In Split, the preview updates within 50ms of typing |
 | **Context menu** | Right-click in the editor: Cut/Copy/Paste/Select All. Right-click in the preview: Copy/Select All. Replaces the native context menu and blocks the browser Reload that would destroy in-memory content |

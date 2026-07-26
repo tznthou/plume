@@ -202,4 +202,56 @@ describe("file", () => {
 
     expect(loadSpy).toHaveBeenCalledWith("open"); // 既有行為不變
   });
+
+  // 分頁快捷鍵（⌘⇧[ / ⌘⇧] / ⌘W）：切換邏輯在 file.ts，選單只負責綁 accelerator
+  it("test_tabs_selectAdjacent_atEdges_wrapsAround", async () => {
+    const file = await loadFileModule();
+    await file.newFile();
+    await file.newFile(); // 共 3 個分頁，active 停在最後一個
+
+    const ids = file.getTabs().map((tab) => tab.id);
+    expect(ids.length).toBe(3);
+    expect(file.getActiveTabId()).toBe(ids[2]);
+
+    await file.selectAdjacentTab(1); // 末端往後 → 環回開頭
+    expect(file.getActiveTabId()).toBe(ids[0]);
+
+    await file.selectAdjacentTab(-1); // 開頭往前 → 環回末端
+    expect(file.getActiveTabId()).toBe(ids[2]);
+
+    await file.selectAdjacentTab(-1);
+    expect(file.getActiveTabId()).toBe(ids[1]);
+  });
+
+  it("test_tabs_selectAdjacent_singleTab_isNoOp", async () => {
+    const file = await loadFileModule();
+    const only = file.getActiveTabId();
+    const tabsSpy = vi.fn();
+    file.onTabsChange(tabsSpy);
+
+    await file.selectAdjacentTab(1);
+    await file.selectAdjacentTab(-1);
+
+    // wrap 回自己 → selectTab 同 id 早退，不重建 EditorState 也不重繪分頁列
+    expect(file.getActiveTabId()).toBe(only);
+    expect(editorMocks.restoreEditorState).not.toHaveBeenCalled();
+    expect(tabsSpy).not.toHaveBeenCalled();
+  });
+
+  it("test_tabs_closeActive_cleanTab_activatesNeighborWithoutPrompt", async () => {
+    const file = await loadFileModule();
+    await file.newFile();
+    await file.newFile();
+    const ids = file.getTabs().map((tab) => tab.id);
+
+    await file.selectAdjacentTab(-1); // 移到中間那個
+    expect(file.getActiveTabId()).toBe(ids[1]);
+
+    const ok = await file.closeTab(file.getActiveTabId()); // ⌘W 的行為
+
+    expect(ok).toBe(true);
+    expect(dialogMocks.ask).not.toHaveBeenCalled(); // 乾淨分頁不問未存檔
+    expect(file.getTabs().map((tab) => tab.id)).toEqual([ids[0], ids[2]]);
+    expect(file.getActiveTabId()).toBe(ids[2]); // 遞補右鄰
+  });
 });

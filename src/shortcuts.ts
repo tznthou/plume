@@ -13,6 +13,11 @@ function getGroups() {
       [`${MOD}${SHIFT}S`, t("shortcuts.saveAs")],
       [`${MOD}P`, t("shortcuts.exportPdf")],
     ]},
+    { title: t("shortcuts.tabGroup"), items: [
+      [`${MOD}${SHIFT}[`, t("menu.prevTab")],
+      [`${MOD}${SHIFT}]`, t("menu.nextTab")],
+      [`${MOD}W`, t("menu.closeTab")],
+    ]},
     { title: t("shortcuts.viewGroup"), items: [
       [`${MOD}E`, t("shortcuts.toggleEditRead")],
       [`${MOD}${SHIFT}F`, t("menu.focusMode")],
@@ -33,6 +38,7 @@ function getGroups() {
 
 let overlay: HTMLElement | null = null;
 let hideAbort: AbortController | null = null;
+let prevFocus: HTMLElement | null = null;
 
 function build(): HTMLElement {
   const el = document.createElement("div");
@@ -43,6 +49,8 @@ function build(): HTMLElement {
 
   const card = document.createElement("div");
   card.className = "shortcuts-card";
+  // 視窗矮到面板溢出時 card 會變捲動容器；不可聚焦的話鍵盤使用者到不了被捲掉的那幾組
+  card.tabIndex = -1;
 
   const heading = document.createElement("h2");
   heading.textContent = t("shortcuts.overlayTitle");
@@ -85,12 +93,17 @@ function show(): void {
     overlay = build();
     document.body.appendChild(overlay);
   }
+  prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   overlay.hidden = false;
+  overlay.querySelector<HTMLElement>(".shortcuts-card")?.focus();
   requestAnimationFrame(() => overlay!.classList.add("visible"));
 }
 
 function hide(): void {
   if (!overlay) return;
+  // 焦點交還原處（通常是編輯器），否則看完快捷鍵得重新點一次才能打字
+  prevFocus?.focus();
+  prevFocus = null;
   hideAbort?.abort();
   const ac = new AbortController();
   hideAbort = ac;
@@ -126,4 +139,5 @@ export function clearShortcutsOverlay(): void {
     overlay.remove();
     overlay = null;
   }
+  prevFocus = null;
 }

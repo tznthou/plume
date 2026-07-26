@@ -1714,6 +1714,11 @@ body.drag-hover::after {
   padding: 28px 32px;
   max-width: 420px;
   width: 88%;
+  /* flex 居中的 item 溢出時上下都會被裁且無法滾動；視窗可縮到 minHeight 400 而面板約 665px 高 */
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  /* 捲到底不外溢給 root，避免 rubber-band 白邊（同 #toc / #codex） */
+  overscroll-behavior: none;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
   transform: scale(0.96);
   transition: transform 0.15s;
@@ -1721,6 +1726,11 @@ body.drag-hover::after {
 
 .shortcuts-overlay.visible .shortcuts-card {
   transform: scale(1);
+}
+
+/* tabIndex -1 只為讓鍵盤能捲動面板；卡片本身有邊框陰影標示，不需要 focus ring */
+.shortcuts-card:focus {
+  outline: none;
 }
 
 html[data-theme="inkstone"] .shortcuts-card {

@@ -25,6 +25,7 @@ import {
   getTabs,
   getActiveTabId,
   selectTab,
+  selectAdjacentTab,
   closeTab,
   onTabsChange,
   getActiveTab,
@@ -233,6 +234,9 @@ function rebuildMenu(): Promise<void> {
     onSaveAs: doSaveAs,
     onExport: () => void exportHtml(),
     onExportPdf: () => void exportPdf(),
+    onPrevTab: () => void selectAdjacentTab(-1),
+    onNextTab: () => void selectAdjacentTab(1),
+    onCloseTab: () => void closeTab(getActiveTabId()),
     onSetMode: setMode,
     onToggleFocus: (checked) => {
       reconfigureFocus(checked ? focusExtension() : []);

@@ -143,6 +143,14 @@ export async function selectTab(id: string): Promise<void> {
   notifyTabsChange();
 }
 
+// 環狀切換相鄰分頁（⌘⇧[ / ⌘⇧]）。單一分頁時 wrap 回自己，selectTab 的同 id 早退讓它成為 no-op。
+export async function selectAdjacentTab(delta: 1 | -1): Promise<void> {
+  const index = tabs.findIndex((t) => t.id === activeTabId);
+  if (index === -1) return;
+  const next = (index + delta + tabs.length) % tabs.length;
+  await selectTab(tabs[next].id);
+}
+
 // Close a tab
 export async function closeTab(id: string): Promise<boolean> {
   const index = tabs.findIndex((t) => t.id === id);
@@ -173,7 +181,10 @@ export async function closeTab(id: string): Promise<boolean> {
     }
   }
 
-  tabs.splice(index, 1);
+  // 未存檔 dialog 期間陣列可能已被其他關閉動作挪動，不信 await 之前取的 index
+  const removeAt = tabs.findIndex((t) => t.id === id);
+  if (removeAt === -1) return false;
+  tabs.splice(removeAt, 1);
 
   if (tabs.length === 0) {
     const newTab = createTab();
@@ -183,7 +194,7 @@ export async function closeTab(id: string): Promise<boolean> {
     await updateTitle();
     loadListener?.("new");
   } else if (id === activeTabId) {
-    const nextActiveIndex = Math.min(index, tabs.length - 1);
+    const nextActiveIndex = Math.min(removeAt, tabs.length - 1);
     const targetTab = tabs[nextActiveIndex];
     activeTabId = targetTab.id;
     restoreTabEditorState(targetTab.editorState ?? createEditorState(targetTab.content));
