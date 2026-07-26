@@ -13,6 +13,11 @@ function getGroups() {
       [`${MOD}${SHIFT}S`, t("shortcuts.saveAs")],
       [`${MOD}P`, t("shortcuts.exportPdf")],
     ]},
+    { title: t("shortcuts.tabGroup"), items: [
+      [`${MOD}${SHIFT}[`, t("menu.prevTab")],
+      [`${MOD}${SHIFT}]`, t("menu.nextTab")],
+      [`${MOD}W`, t("menu.closeTab")],
+    ]},
     { title: t("shortcuts.viewGroup"), items: [
       [`${MOD}E`, t("shortcuts.toggleEditRead")],
       [`${MOD}${SHIFT}F`, t("menu.focusMode")],

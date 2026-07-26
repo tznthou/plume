@@ -143,6 +143,14 @@ export async function selectTab(id: string): Promise<void> {
   notifyTabsChange();
 }
 
+// 環狀切換相鄰分頁（⌘⇧[ / ⌘⇧]）。單一分頁時 wrap 回自己，selectTab 的同 id 早退讓它成為 no-op。
+export async function selectAdjacentTab(delta: 1 | -1): Promise<void> {
+  const index = tabs.findIndex((t) => t.id === activeTabId);
+  if (index === -1) return;
+  const next = (index + delta + tabs.length) % tabs.length;
+  await selectTab(tabs[next].id);
+}
+
 // Close a tab
 export async function closeTab(id: string): Promise<boolean> {
   const index = tabs.findIndex((t) => t.id === id);

@@ -127,6 +127,10 @@
     "copyHtml": "複製為 HTML",
     "help": "輔助說明",
     "shortcuts": "鍵盤快捷鍵",
+    "tabs": "分頁",
+    "prevTab": "上一個分頁",
+    "nextTab": "下一個分頁",
+    "closeTab": "關閉分頁",
     "compose": "Compose",
     "split": "Split",
     "read": "Read",
@@ -152,10 +156,11 @@
     "increaseFont": "放大字型",
     "decreaseFont": "縮小字型",
     "resetFont": "重設字型大小",
+    "tabGroup": "分頁",
     "toolsGroup": "工具",
     "copyHtml": "複製為 HTML",
     "exitFullscreen": "退出全螢幕",
     "shortcutsTip": "快捷鍵提示",
-    "overlayTitle": "Keyboard Shortcuts"
+    "overlayTitle": "鍵盤快捷鍵"
   }
 }

@@ -16,6 +16,9 @@ export interface MenuCallbacks {
   onSaveAs: () => void;
   onExport: () => void;
   onExportPdf: () => void;
+  onPrevTab: () => void;
+  onNextTab: () => void;
+  onCloseTab: () => void;
   onSetMode: (mode: Mode) => void;
   onToggleFocus: (checked: boolean) => void;
   onToggleTypewriter: (checked: boolean) => void;
@@ -234,6 +237,18 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
     ],
   });
 
+  // 分頁快捷鍵走原生 accelerator：⌘⇧[ / ⌘⇧] 沿用 Safari/Chrome 慣例，
+  // 且 accelerator 會攔截 webview keydown，不會被 CM6 吃掉也不會雙重觸發。
+  const tabsSubmenu = await Submenu.new({
+    text: t("menu.tabs"),
+    items: [
+      { text: t("menu.prevTab"), accelerator: "CmdOrCtrl+Shift+[", action: () => cb.onPrevTab() },
+      { text: t("menu.nextTab"), accelerator: "CmdOrCtrl+Shift+]", action: () => cb.onNextTab() },
+      { item: "Separator" },
+      { text: t("menu.closeTab"), accelerator: "CmdOrCtrl+W", action: () => cb.onCloseTab() },
+    ],
+  });
+
   const helpSubmenu = await Submenu.new({
     text: t("menu.help"),
     items: [
@@ -243,7 +258,7 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   await helpSubmenu.setAsHelpMenuForNSApp();
 
   const menu = await Menu.new({
-    items: [appSubmenu, fileSubmenu, editSubmenu, viewSubmenu, helpSubmenu],
+    items: [appSubmenu, fileSubmenu, editSubmenu, viewSubmenu, tabsSubmenu, helpSubmenu],
   });
   await menu.setAsAppMenu();
 }
