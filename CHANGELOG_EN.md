@@ -6,6 +6,19 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+### Added
+
+- Tab hotkeys: `⌘⇧[` / `⌘⇧]` cycle through tabs, `⌘W` closes the current one, and a new Tabs menu carries them. Tabs were previously mouse-only unless you first moved focus to the tab strip — while writing, focus lives in the editor, so there was no keyboard route at all
+- Honor the system "reduce motion" preference: interface transitions drop to zero (WCAG 2.3.3)
+
+### Fixed
+
+- The shortcut overlay and the settings panel both declared `aria-modal` without any focus management: focus never entered the panel, Tab walked out into the toolbar behind it, and closing left focus wherever it had wandered. Declaring a modal without trapping focus is worse than not declaring one — the screen reader hides the background as instructed while the keyboard is still standing in it. Focus is now held inside the panel (Tab cycles) and returned to where it started on close
+- `<html lang>` did not follow the interface language, leaving screen readers to pronounce English UI with a Chinese voice
+- The shortcut overlay overflowed short windows with no way to scroll, clipped at both top and bottom
+- The shortcut overlay title was untranslated in the Traditional Chinese interface (since v0.12)
+- Status bar gauges carried their accessible labels on elements with no semantics, where assistive tech ignores them
+
 ## [0.14.1] - 2026-07-26
 
 ### Security
