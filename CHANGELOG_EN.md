@@ -6,6 +6,22 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-07-26
+
+### Security
+
+- Custom theme CSS sanitizer rewritten from "strip in place" to "detect and reject the whole file": the in-place approach had bypassable exfiltration paths, and rewriting could corrupt legitimate CSS. The new fail-close design errs toward refusing to load, locked in by 19 attack-payload regression tests on the Rust side
+
+### Fixed
+
+- Inkstone theme: export dropdown hidden behind the tab bar, making Export PDF unreachable (stacking-context bug present since v0.11)
+
+### Changed
+
+- i18n source of truth consolidated into a single `locales/*.json` (embedded at compile time on both sides), fixing 25 keys that had drifted TS-only since v0.13 — seeded language-pack files are now complete
+- "Open language pack / themes folder" now uses the official opener plugin API instead of hand-rolled per-platform commands
+- Release CI now runs Rust tests (previously only frontend Vitest)
+
 ## [0.14.0] - 2026-07-24
 
 ### Added
