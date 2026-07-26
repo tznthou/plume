@@ -60,6 +60,10 @@ jobs:
 
       - run: npm run test
 
+      # Rust 端測試（含 CSS sanitizer 的外連繞過 regression）——沒有這步，
+      # src-tauri 的 #[cfg(test)] 在 CI 一次都不會跑，退化會直接出貨。
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
