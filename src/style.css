@@ -570,7 +570,9 @@ html[data-theme="inkstone"] #tabs-container {
   background: var(--bg-bar);
   border-bottom: none;
   box-shadow: 0 4px 10px -8px rgba(31, 29, 26, 0.15);
-  z-index: 3;
+  /* 必須低於 #toolbar 的 z-index: 2 — export 下拉選單與 tooltip 困在
+     toolbar 的 stacking context 內，tabs 更高會整條蓋住它們 */
+  z-index: 1;
 }
 
 html[data-theme="inkstone"] .tab {
