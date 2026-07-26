@@ -84,7 +84,56 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Un-draft release once all platforms are uploaded
+      - uses: actions/checkout@v4
+
+      # Release notes 取自雙語 CHANGELOG 的該版段落。刻意不用 tauri-action 的 releaseBody：
+      # 那個 input 會在三平台 matrix 各跑一次，還得應付 Windows runner 的 shell 差異；
+      # 這裡只跑一次、在 ubuntu 上。draft 期間 body 仍是 commit message，但 draft 不對外。
+      # 條件判斷一律寫成 if/fi——`[ ... ] && cmd` 在條件為假時整行 exit 1，會被 bash -e 當失敗。
+      - name: Compose release notes from CHANGELOG
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${TAG#v}"
+          extract() {
+            awk -v v="$VERSION" '
+              $0 ~ "^## \\[" v "\\]" { found = 1; next }
+              found && /^## \[/ { exit }
+              found { buf = buf $0 "\n" }
+              END { sub(/^\n+/, "", buf); sub(/\n+$/, "\n", buf); printf "%s", buf }
+            ' "$1"
+          }
+          ZH="$(extract CHANGELOG.md)"
+          EN="$(extract CHANGELOG_EN.md)"
+          # 抽不到段落不讓發版整條紅掉——產物已經上傳，缺的只是說明文字
+          if [ -z "$ZH" ] && [ -z "$EN" ]; then
+            echo "::warning::No CHANGELOG section for $VERSION — release notes will carry install instructions only"
+          fi
+          {
+            if [ -n "$ZH" ]; then printf '%s\n---\n\n' "$ZH"; fi
+            if [ -n "$EN" ]; then printf '%s\n---\n\n' "$EN"; fi
+            cat <<'NOTES'
+          ## 安裝 / Installation
+
+          **macOS**：下載 `.dmg`（Apple Silicon 選 `aarch64`，Intel 選 `x64`）。首次開啟請對 Plume.app **按右鍵 →「打開」**；若顯示「已損毀」，執行 `xattr -dc /Applications/Plume.app`。本版為 ad-hoc 簽章，未經 Apple 公證。
+
+          **Windows**：下載 `.exe`（NSIS）或 `.msi`。未經程式碼簽章，SmartScreen 會要你確認「仍要執行」。
+
+          ---
+
+          **macOS**: grab the `.dmg` (`aarch64` for Apple Silicon, `x64` for Intel). On first launch, **right-click Plume.app → Open**; if macOS calls it "damaged", run `xattr -dc /Applications/Plume.app`. This build is ad-hoc signed, not notarized by Apple.
+
+          **Windows**: grab the `.exe` (NSIS) or `.msi`. Unsigned, so SmartScreen will ask you to confirm.
+          NOTES
+          } > release-notes.md
+          echo "--- composed notes ---"
+          cat release-notes.md
+
+      - name: Publish release with notes once all platforms are uploaded
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${{ github.ref_name }}" --draft=false --repo "${{ github.repository }}"
+        run: |
+          gh release edit "${{ github.ref_name }}" \
+            --notes-file release-notes.md \
+            --draft=false \
+            --repo "${{ github.repository }}"
