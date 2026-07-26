@@ -1,4 +1,5 @@
 import { t } from "./i18n";
+import { trapFocus } from "./dialog-focus";
 
 const isMac = navigator.platform.startsWith("Mac");
 
@@ -38,7 +39,7 @@ function getGroups() {
 
 let overlay: HTMLElement | null = null;
 let hideAbort: AbortController | null = null;
-let prevFocus: HTMLElement | null = null;
+let releaseFocus: (() => void) | null = null;
 
 function build(): HTMLElement {
   const el = document.createElement("div");
@@ -49,10 +50,16 @@ function build(): HTMLElement {
 
   const card = document.createElement("div");
   card.className = "shortcuts-card";
-  // 視窗矮到面板溢出時 card 會變捲動容器；不可聚焦的話鍵盤使用者到不了被捲掉的那幾組
+  // 與設定面板對齊：兩個浮層都是 modal，語意也該一致
+  card.setAttribute("role", "dialog");
+  card.setAttribute("aria-modal", "true");
+  card.setAttribute("aria-labelledby", "shortcuts-title");
+  // 面板無可聚焦子元素（純文字），焦點只能落在容器上；
+  // 視窗矮到面板溢出時它也是捲動容器，不可聚焦的話鍵盤到不了被捲掉的那幾組
   card.tabIndex = -1;
 
   const heading = document.createElement("h2");
+  heading.id = "shortcuts-title";
   heading.textContent = t("shortcuts.overlayTitle");
   card.appendChild(heading);
 
@@ -93,17 +100,17 @@ function show(): void {
     overlay = build();
     document.body.appendChild(overlay);
   }
-  prevFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
   overlay.hidden = false;
-  overlay.querySelector<HTMLElement>(".shortcuts-card")?.focus();
+  // !releaseFocus：關閉動畫途中可再次開啟，重複 trap 會漏掉前一個 keydown handler
+  const card = overlay.querySelector<HTMLElement>(".shortcuts-card");
+  if (card && !releaseFocus) releaseFocus = trapFocus(card);
   requestAnimationFrame(() => overlay!.classList.add("visible"));
 }
 
 function hide(): void {
   if (!overlay) return;
-  // 焦點交還原處（通常是編輯器），否則看完快捷鍵得重新點一次才能打字
-  prevFocus?.focus();
-  prevFocus = null;
+  releaseFocus?.();
+  releaseFocus = null;
   hideAbort?.abort();
   const ac = new AbortController();
   hideAbort = ac;
@@ -135,9 +142,10 @@ export function hideShortcuts(): boolean {
 }
 
 export function clearShortcutsOverlay(): void {
+  releaseFocus?.();
+  releaseFocus = null;
   if (overlay) {
     overlay.remove();
     overlay = null;
   }
-  prevFocus = null;
 }

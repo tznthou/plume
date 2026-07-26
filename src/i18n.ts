@@ -66,6 +66,11 @@ function formatString(str: string, params?: Record<string, string>): string {
 }
 
 export function updateDOMTranslations(): void {
+  // 螢幕閱讀器靠 <html lang> 挑發音語音。index.html 寫死 zh-Hant，切語言時不更新
+  // 就會用中文語音念英文介面。這裡是 initI18n 與 setLanguage 的共同出口，設一次兩條路都覆蓋。
+  // locale code 與 BCP 47 只差分隔符（zh_Hant → zh-Hant），使用者自備的語言包同樣適用。
+  document.documentElement.lang = activeLang.replace(/_/g, "-");
+
   // Update elements with text translation
   document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((el) => {
     const key = el.getAttribute("data-i18n")!;

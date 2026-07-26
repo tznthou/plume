@@ -2064,3 +2064,20 @@ html[data-theme="inkstone"] .settings-card {
 .context-menu-item:hover:not(:disabled) .context-menu-shortcut {
   color: inherit;
 }
+
+/* WCAG 2.3.3：系統要求減少動態時，過場一律歸零。
+   刻意用 0s 而非社群慣例的 0.01ms——浮層關閉邏輯（shortcuts.ts:123 / settings.ts:236）
+   讀 transitionDuration 分流，0 會走那裡已存在的「立即完成」分支，
+   不必賭瀏覽器對極短 transition 是否仍 fire transitionend。 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}

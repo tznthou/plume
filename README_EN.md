@@ -67,6 +67,7 @@ Plume splits reading and writing into three modes — Compose (immersive writing
 | **Reading font** | Default / Serif / Sans / Mono, with `⌘=` / `⌘-` / `⌘0` to adjust the size live (12–24px) |
 | **Native menu bar** | Plume / File / Edit / View / Help system-native menus |
 | **Shortcut cheat sheet** | `⌘/` brings up an overlay; key labels adapt to the platform (macOS `⌘` / Windows `Ctrl`) |
+| **Accessibility** | Overlays hold focus and hand it back — Tab cycles inside the panel, Escape closes, and closing returns focus where it was. `<html lang>` follows the interface language, so screen readers stop reading English UI with a Chinese voice. When the system asks for reduced motion, every transition drops to zero |
 
 ## Architecture
 
@@ -115,7 +116,7 @@ flowchart LR
 | mermaid | 11.x | Diagram rendering (lazy-loaded, `securityLevel: "strict"`) |
 | DOMPurify | 3.x | XSS sanitization of rendered output (non-negotiable, see SPEC) |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
-| Vitest | 4.x | Unit tests (81 of them — rendering pipeline, Codex tree, themes, settings) |
+| Vitest | 4.x | Unit tests (96 of them — rendering pipeline, Codex tree, themes, settings, tabs, focus management, i18n) |
 
 > Front matter hiding uses a regex strip ahead of `render()` rather than `markdown-it-front-matter` — that package has an edge case where a document starting with `---` but never closing it gets swallowed whole.
 
@@ -175,6 +176,7 @@ markdown-tool/
 │   ├── typewriter.ts       # typewriter mode: pin the cursor line to screen center
 │   ├── menu.ts             # native menu bar (@tauri-apps/api/menu, built in JS)
 │   ├── shortcuts.ts        # keyboard shortcut overlay (cheat sheet)
+│   ├── dialog-focus.ts     # modal focus: Tab cycling, restore focus on close
 │   ├── context-menu.ts     # context menu: editor/preview with tailored actions
 │   ├── statusbar.ts        # status bar: word/line count, render time, unsaved indicator
 │   └── style.css           # layout + four themes + Compose/Split/Read modes + preview typography

@@ -37,14 +37,26 @@ flowchart TB
 
 | 模組 | 職責 | 依賴 |
 |------|------|------|
-| `src/main.ts` | 進入點：初始化各模組、註冊快捷鍵（Cmd+N/O/S/Shift+S）、關閉攔截 | editor, file, recent, preview |
+| `src/main.ts` | 進入點：組裝各模組、撰／參／閱 模式切換、分頁列 UI 渲染與 roving tabindex 鍵盤導航、Escape 處理鏈（設定面板→快捷鍵浮層→全螢幕）、關閉攔截。**快捷鍵不在此註冊**——全部走 `menu.ts` 的原生 accelerator | 幾乎所有前端模組 |
 | `src/editor.ts` | 封裝 CM6：建立 EditorView（行號、lang-markdown、基礎快捷鍵）、提供 `getContent()` / `setContent()` / `onChange(cb)` | codemirror |
 | `src/renderer.ts` | **純函式** `render(md: string): string`：markdown-it（GFM + linkify + task-lists）→ highlight.js → DOMPurify | markdown-it, hljs, dompurify |
 | `src/preview.ts` | 接收 HTML 更新預覽 DOM、同步捲動（編輯→預覽單向比例式）、攔截 `a[href^="http"]` 點擊改走 opener、mermaid 圖表懶載入渲染（`securityLevel: 'strict'`，雙主題同步） | renderer 輸出, plugin-opener, mermaid（動態 import） |
 | `src/file.ts` | 開/存/另存/新增/匯出 HTML/外部路徑開檔（`openExternal`）；dirty 確認流程；維護 `DocState`（path/dirty）；更新視窗標題（`檔名 ●`）。內容唯一真相來源是 CM6 EditorState，**不另存字串副本** | plugin-dialog, plugin-fs, core(invoke) |
 | `src/recent.ts` | 最近 10 筆（去重、新→舊）；讀寫 store；失效項移除 | plugin-store, file |
 | `src/codex.ts` | 冊（Codex）：開資料夾為冊、Rust 持有 dialog 核准冊 root、Rust 唯讀列舉 `.md` 建巢狀樹、點檔走 `openExternal`、多冊切換、`codex.json` 持久化（只存根路徑，每次重列舉） | plugin-dialog, plugin-store, core(invoke), file |
-| `src-tauri/src/lib.rs` | Tauri builder：註冊五個官方 plugin + 四個自訂 command（`grant_scope` / `get_opened_urls` / `list_codex_files` / `pick_codex_root`）；`RunEvent::Opened` 檔案關聯處理 | tauri plugins, tauri-plugin-fs(FsExt) |
+| `src/theme.ts` | 佈景主題四態（`vol-de-nuit` / `inkstone` / `office-97` / `auto`）＋自訂主題載入；`matchMedia` 監聽系統明暗；store 持久化 | plugin-store, core(invoke) |
+| `src/i18n.ts` | 語言包載入（`load_locales` 讀使用者 disk 語言包，缺鍵回退編譯期內嵌的 `locales/*.json`）、即時切換、DOM 翻譯（掃 `data-i18n*` 屬性）、`<html lang>` 同步 BCP 47 | plugin-store, core(invoke), locales/*.json |
+| `src/settings.ts` | 設定面板：主題選擇、語言選擇、版本顯示、更新檢查（GitHub Releases API） | theme, i18n, dialog-focus, plugin-opener |
+| `src/menu.ts` | 原生選單列（`@tauri-apps/api/menu`，JS 端建構）：Plume／檔案／編輯／檢視／分頁／輔助說明，含全部 accelerator。**accelerator 攔截 webview keydown，不會雙重觸發** | @tauri-apps/api/menu, i18n |
+| `src/shortcuts.ts` | 快捷鍵 cheat sheet 浮層（`⌘/`）：按鍵標示隨平台自適應；`role="dialog"` + `aria-modal` | i18n, dialog-focus |
+| `src/dialog-focus.ts` | Modal 浮層焦點管理（設定面板／快捷鍵浮層共用）：開啟聚焦、Tab 環繞、釋放時還原原焦點。keydown 掛 capture phase，因為 CM6 也吃 Tab 做縮排 | 無 |
+| `src/toc.ts` | 目錄導覽：預覽 DOM 擷取 h1–h6、階層縮排、點擊跳轉 | preview 輸出 |
+| `src/statusbar.ts` | 狀態列：字數／行數／渲染時間儀表、未儲存指示（`aria-live="polite"`） | editor, file, i18n |
+| `src/focus-mode.ts` | 專注模式：游標所在段落聚焦、其餘淡出（段落邊界＝空行）。CM6 extension，僅「撰」態生效 | codemirror |
+| `src/typewriter.ts` | 打字機模式：游標行固定畫面垂直中央。CM6 extension，僅「撰」態生效 | codemirror |
+| `src/reading-prefs.ts` | 閱讀字型（預設／Serif／Sans／Mono）與字級（12–24px），store 持久化 | plugin-store |
+| `src/context-menu.ts` | 自訂右鍵選單：編輯區剪下／複製／貼上／全選，預覽區複製／全選。取代原生選單以擋掉會毀掉未存內容的「重新載入」 | i18n |
+| `src-tauri/src/lib.rs` | Tauri builder：註冊五個官方 plugin ＋ **11 個自訂 command**——檔案兩個（`grant_scope` / `get_opened_urls`）、冊三個（`pick_codex_root` / `list_codex_files` / `delete_codex_folder`）、i18n 兩個（`load_locales` / `open_locales_dir`）、主題四個（`load_custom_themes` / `open_themes_dir` / `import_theme_file` / `copy_builtin_theme_template`）；`RunEvent::Opened` 檔案關聯處理 | tauri plugins, tauri-plugin-fs(FsExt), tauri-plugin-opener |
 
 ## IPC 邊界與權限（capabilities）
 
@@ -65,9 +77,17 @@ flowchart TB
 | 冷啟動檔案路徑取得 | `invoke("get_opened_urls")` | `allow-get-opened-urls`（自訂 command；回傳 OS 傳入的檔案路徑後清空暫存） |
 | 開冊資料夾選取與核准 | `invoke("pick_codex_root")` | `allow-pick-codex-root`（自訂 command；Rust 持有原生資料夾 dialog，canonical root 加入 approved-roots 白名單後回傳 `.md` 清單，**不開目錄 fs scope**） |
 | 冊資料夾唯讀列舉 | `invoke("list_codex_files", { root })` | `allow-list-codex-files`（自訂 command；僅接受 approved-roots 內的 canonical root，遞迴列 `.md` 路徑，**不開目錄 fs scope**、skip symlink、深度上限 16） |
+| 冊移除 | `invoke("delete_codex_folder", { path })` | `allow-delete-codex-folder`（自訂 command；canonicalize 後從 approved-roots 白名單移除並持久化。**不刪磁碟上的任何檔案**——冊是唯讀掛載，移除只是收回授權） |
+| 語言包載入 | `invoke("load_locales")` | `allow-load-locales`（自訂 command；讀 `app_local_data_dir/locales/*.json` 全部檔案。zh_Hant/en 兩份**僅在不存在時**種下編譯期內嵌的內容——既有使用者的 disk 語言包因此不會被新版覆寫） |
+| 開啟語言包資料夾 | `invoke("open_locales_dir")` | `allow-open-locales-dir`（自訂 command；`tauri_plugin_opener::open_path` free function——它收 `AsRef<Path>` 保留原始 path bytes，而 `OpenerExt::open_path` 收 `Into<String>`，非 UTF-8 路徑會被 lossy 轉成開不到的路徑） |
+| 自訂主題載入 | `invoke("load_custom_themes")` | `allow-load-custom-themes`（自訂 command；讀 `app_local_data_dir/themes/*.css`，**每份都過 `sanitize_theme_css`**；首次執行種下三個範本。見下方「自訂主題 CSS」） |
+| 開啟主題資料夾 | `invoke("open_themes_dir")` | `allow-open-themes-dir`（自訂 command；同 `open_locales_dir` 的 free function 理由） |
+| 匯入主題檔 | `invoke("import_theme_file")` | `allow-import-theme-file`（自訂 command；Rust 持有 CSS 檔 dialog，複製進 themes/。**同名已存在則報錯不覆寫**） |
+| 複製內建主題為範本 | `invoke("copy_builtin_theme_template", { themeId })` | `allow-copy-builtin-theme-template`（自訂 command；寫出 `<theme>-custom.css`。範本是 UX 不是安全機制——惡意主題作者不會遵守範本，防線在載入前的強制檢查） |
 | 拖曳事件 | `getCurrentWebview().onDragDropEvent()` | 無額外權限（Tauri 2 core 內建） |
 | 暖啟動檔案事件 | `listen("file-open")` | 無額外權限（`core:event:default` 已含 listen） |
-| 原生選單列 | `@tauri-apps/api/menu`（JS 端建構） | `core:menu:default` |
+| 原生選單列 | `@tauri-apps/api/menu`（JS 端建構） | `core:menu:default`（`core:default` 已含；accelerator 由原生選單處理，webview 收不到該 keydown） |
+| PDF 匯出（系統列印） | `invoke("plugin:webview\|print")` | `core:webview:allow-print`（**不能用 `window.print()`**——它在 WKWebView 靜默失敗。invoke 會在列印面板出現前就 resolve，不等使用者操作） |
 
 關鍵機制：`plugin-fs` 預設 scope 不含使用者任意路徑；經 `plugin-dialog` 選取的路徑會被動態加入 fs scope，`plugin-persisted-scope` 再把這份授權跨 session 保存——這是「最近檔案重啟後仍可開」的依賴鏈，缺一不可。此鏈路已完整實測通過：前半段（dialog 授權 → fs scope → readTextFile）於 2026-06-11 Task 0 IPC spike 驗證；persisted-scope 跨 session 段於同日 Task 6 驗收驗證（重啟後不經 dialog 直開最近檔案成功）。
 
@@ -103,13 +123,32 @@ md 字串 → markdown-it.render() → raw HTML → DOMPurify.sanitize() → 預
 
 ## 資料模型
 
-無資料庫。兩份輕量結構作為契約：
+無資料庫。以下結構作為契約：
 
 ```typescript
-// file.ts — 記憶體文件狀態
+// file.ts — 分頁陣列是文件狀態的真相來源（v0.11 多分頁起）
+interface Tab {
+  id: string;
+  path: string | null;          // null = 未命名新文件
+  dirty: boolean;               // 內容是否與磁碟不同步
+  content: string;              // 僅切離分頁時的快照，供還原用
+  scrollPos: number;
+  editorState: EditorState | null; // 各分頁獨立的 CM6 state，含 undo history
+}
+
+// file.ts — DocState 不是儲存結構，是從 active tab 取的**衍生視圖**
+// （getDocState()）。編輯內容的唯一真相仍是 CM6 EditorState，不另存字串副本
 interface DocState {
-  path: string | null;   // null = 未命名新文件
-  dirty: boolean;        // 內容是否與磁碟不同步
+  path: string | null;
+  dirty: boolean;
+}
+
+// lib.rs — 自訂主題（Rust → 前端）
+interface CustomTheme {
+  id: string;              // 檔名去副檔名
+  name: string;            // CSS 註解 /* Theme Name: X */ 解析，缺則用 id
+  cssContent: string;      // 已過 sanitize_theme_css；偵測到外連時為空字串
+  filePath: string;
 }
 
 // recent.json — plugin-store 持久化（app data 目錄）
@@ -121,6 +160,8 @@ interface RecentStore {
   files: RecentFile[];   // 最多 10 筆，新→舊，path 去重
 }
 ```
+
+其餘持久化位置（皆在 `app_local_data_dir`）：`settings.json`（plugin-store：language / theme / 閱讀字型字級）、`codex.json`（plugin-store：冊的根路徑清單，每次重列舉）、`codex_roots.json`（**不經 store 的私有檔**：approved-roots 白名單，避免前端或 XSS 寫入）、`locales/*.json`（使用者語言包）、`themes/*.css`（自訂主題）。
 
 匯出 HTML 格式契約：單一獨立檔 = `<!doctype html>` + `<style>`（內嵌預覽同款 typography + hljs 主題 CSS）+ 渲染後 body。無外部資源引用，離線可開。
 
@@ -135,6 +176,8 @@ interface RecentStore {
 | 權限最小化 | capabilities 僅宣告上表權限；fs scope 不開全域路徑 |
 | 冊列舉授權 | `pick_codex_root` 由 Rust 持有 dialog 並核准 canonical root；`list_codex_files` 只列 approved-roots 內的冊。白名單存於 app local data 私有檔，不經前端可寫 store 或 fs scope |
 | 連結外開 | 預覽區連結一律 opener 走系統瀏覽器，webview 不導航至外部 URL |
+| 自訂主題 CSS | `sanitize_theme_css` **偵測到外部資源參照就整份拒絕**（回傳空字串），不做就地清除——清除要求本函式對 CSS 的理解與瀏覽器 tokenizer 完全一致，任何落差都是繞過。前一版就地改寫被四種形式穿透（註解前綴 `@import`、`\75 rl()`、`\5c 75` 二階 escape、單斜線 `https:/host`），且改寫本身會破壞合法 CSS（`content: "\22"` 被解成裸引號後打亂字串邊界）。偵測在解碼視圖上做：移除註解 → escape 解到 fixpoint → 剔除 `data:` URI（SVG data: 免防但要剔除以免誤殺）。判斷失準只會偏向拒絕載入（fail-close）；Rust 端 19 個攻擊 payload 迴歸測試鎖定 |
+| Modal 焦點 | 掛 `aria-modal="true"` 的浮層必須真的關住焦點（`dialog-focus`）。宣告 modal 卻讓 Tab 走得出去，等於對輔助技術謊報：螢幕閱讀器照著把背景藏起來，鍵盤卻還站在那裡 |
 
 ## 錯誤處理標準
 

@@ -67,6 +67,7 @@ Plume 把讀寫分成三態——撰（沉浸寫）、參（對照寫）、閱�
 | **閱讀字型** | 預設 / Serif / Sans / Mono 四選一，`⌘=` / `⌘-` / `⌘0` 即時調整字級（12–24px） |
 | **原生選單列** | Plume / File / Edit / View / Help 系統原生選單 |
 | **快捷鍵提示** | `⌘/` 叫出 cheat sheet 浮層，按鍵標示隨平台自適應（macOS `⌘` / Windows `Ctrl`） |
+| **無障礙** | 浮層焦點關得住也放得開——Tab 在面板內環繞、Esc 關閉、關掉後焦點回到原本的位置；`<html lang>` 隨介面語言更新，螢幕閱讀器不會用中文語音念英文；系統開啟「減少動態」時所有過場歸零 |
 
 ## 系統架構
 
@@ -115,7 +116,7 @@ flowchart LR
 | mermaid | 11.x | 圖表渲染（懶載入，`securityLevel: "strict"`） |
 | DOMPurify | 3.x | 渲染輸出 XSS 消毒（必備，見 SPEC 安全章節） |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
-| Vitest | 4.x | 單元測試（81 個，渲染管線、冊樹建構、主題、設定為主） |
+| Vitest | 4.x | 單元測試（96 個，渲染管線、冊樹建構、主題、設定、分頁、焦點管理、i18n） |
 
 > Front matter 隱藏改用 `render()` 前置 regex 剝除，不走 `markdown-it-front-matter`——該套件對「以 `---` 開頭但無閉合」的文件有整段吃掉的 edge case。
 
@@ -175,6 +176,7 @@ markdown-tool/
 │   ├── typewriter.ts       # 打字機模式：游標行固定畫面中央
 │   ├── menu.ts             # 原生選單列（@tauri-apps/api/menu，JS 端建構）
 │   ├── shortcuts.ts        # 快捷鍵提示浮層（cheat sheet）
+│   ├── dialog-focus.ts     # 浮層焦點管理：Tab 環繞、關閉後還原原焦點
 │   ├── context-menu.ts     # 右鍵選單：編輯區/預覽區分別對應操作
 │   ├── statusbar.ts        # 狀態列：字數/行數/渲染時間/未儲存指示
 │   └── style.css           # 版面 + 四主題 + 撰／參／閱 三態 + 預覽 typography

@@ -1,12 +1,14 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { t } from "./i18n";
+import { trapFocus } from "./dialog-focus";
 
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/tznthou/plume/releases/latest";
 const GITHUB_LATEST_RELEASE_URL = "https://github.com/tznthou/plume/releases/latest";
 
 let overlay: HTMLElement | null = null;
 let hideAbort: AbortController | null = null;
+let releaseFocus: (() => void) | null = null;
 
 export interface ReleaseAsset {
   name: string;
@@ -211,11 +213,18 @@ export function showSettings(): void {
   hideAbort?.abort();
   hideAbort = null;
   overlay.hidden = false;
+  // 卡片掛著 aria-modal="true"，得真的把焦點關進來才不算對輔助技術謊報。
+  // 檢查 releaseFocus 是因為關閉動畫途中可以再次開啟（hideAbort 那條路）：
+  // 重複 trap 會讓前一個 keydown handler 拆不掉，開啟前的焦點也跟著丟掉
+  const card = overlay.querySelector<HTMLElement>(".settings-card");
+  if (card && !releaseFocus) releaseFocus = trapFocus(card);
   requestAnimationFrame(() => overlay!.classList.add("visible"));
 }
 
 export function hideSettings(): boolean {
   if (!overlay || overlay.hidden) return false;
+  releaseFocus?.();
+  releaseFocus = null;
   hideAbort?.abort();
   const ac = new AbortController();
   hideAbort = ac;
