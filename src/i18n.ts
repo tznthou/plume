@@ -2,6 +2,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import zhHant from "../locales/zh_Hant.json";
 import en from "../locales/en.json";
+import zhHans from "../locales/zh_Hans.json";
+import ja from "../locales/ja.json";
 
 const STORE_FILE = "settings.json";
 const STORE_KEY = "language";
@@ -12,7 +14,13 @@ let activeLang = DEFAULT_LANG;
 // 翻譯真相唯一來源是 locales/*.json（Rust 端 load_locales 亦 include_str! 同一組檔案）。
 // 此處為 disk 語言包缺鍵時的 fallback；淺拷貝讓 initI18n 的 merge 打在副本上，不動 module export
 // ——它只寫到 section 層（allLocales[lang][section] = {...}），拷貝深度對齊寫入深度即足夠。
-let allLocales: Record<string, any> = { zh_Hant: { ...zhHant }, en: { ...en } };
+// 宣告順序即語言選單順序：新語言 append 在後，不動 zh_Hant/en 既有位置。
+let allLocales: Record<string, any> = {
+  zh_Hant: { ...zhHant },
+  en: { ...en },
+  zh_Hans: { ...zhHans },
+  ja: { ...ja },
+};
 let changeCallback: (() => void) | null = null;
 
 function getStore(): Promise<Store> {

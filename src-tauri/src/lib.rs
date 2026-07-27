@@ -203,16 +203,18 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
 
     // 翻譯真相唯一來源是 repo 的 locales/*.json（前端 i18n.ts 亦 import 同一組檔案，
     // 編譯期內嵌保證兩端同步）。此處只在使用者語言包不存在時種下初始檔。
-    const ZH_HANT_JSON: &str = include_str!("../../locales/zh_Hant.json");
-    const EN_JSON: &str = include_str!("../../locales/en.json");
+    const SEEDS: [(&str, &str); 4] = [
+        ("zh_Hant.json", include_str!("../../locales/zh_Hant.json")),
+        ("en.json", include_str!("../../locales/en.json")),
+        ("zh_Hans.json", include_str!("../../locales/zh_Hans.json")),
+        ("ja.json", include_str!("../../locales/ja.json")),
+    ];
 
-    let zh_hant_path = locales_dir.join("zh_Hant.json");
-    if !zh_hant_path.exists() {
-        let _ = std::fs::write(&zh_hant_path, ZH_HANT_JSON);
-    }
-    let en_path = locales_dir.join("en.json");
-    if !en_path.exists() {
-        let _ = std::fs::write(&en_path, EN_JSON);
+    for (filename, content) in SEEDS {
+        let path = locales_dir.join(filename);
+        if !path.exists() {
+            let _ = std::fs::write(&path, content);
+        }
     }
 
     // Read all JSON files in the locales directory
