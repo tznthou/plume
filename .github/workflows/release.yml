@@ -23,7 +23,52 @@ jobs:
       - run: cargo audit
         working-directory: src-tauri
 
+  # 先把 release 建好再讓三平台上傳。tauri-action 預設行為是「查不到該 tag 的 draft 就自己建一個」，
+  # 三個 build job 平行跑時那個「查詢→建立」之間有競態窗口。v0.16.0 實際踩到：x64 於 05:46:08
+  # 建立 release，aarch64 於 05:46:09 查詢仍看不到，於是又建了第二個——同一個 tag 兩個 release，
+  # Apple Silicon 的 dmg 與 app.tar.gz 全留在沒人看得到的 draft 裡，正式那份只有 x64 與 Windows。
+  # v0.15.0 沒撞上純粹是兩個 macOS job 差了 89 秒；v0.16.0 因 Rust cache 命中而只差 2 秒。
+  # 把「建立」收斂成單一 job，build 只上傳不建立，競態就不存在了（而非靠 max-parallel 排隊迴避）。
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      release_id: ${{ steps.create.outputs.release_id }}
+    steps:
+      - name: Create or reuse draft release
+        id: create
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          # 重跑整條 workflow 時必須重用既有 release——再建一個就是親手製造
+          # 這個 job 要消滅的「同 tag 雙 release」。
+          matches="$(gh api "repos/$REPO/releases" --paginate \
+                       --jq "[.[] | select(.tag_name == \"$TAG\")] | length")"
+          if [ "$matches" -gt 1 ]; then
+            # 已經處於本 job 要防止的狀態。此時「挑一個」是隨機的——API 回傳順序不保證，
+            # 實測 v0.16.0 事故時挑到的正是資產不全的那份。寧可停下要求人工清理。
+            echo "::error::找到 $matches 個 tag 為 $TAG 的 release。同 tag 多個 release 需人工清理後再重跑。"
+            exit 1
+          fi
+          id="$(gh api "repos/$REPO/releases" --paginate \
+                  --jq "[.[] | select(.tag_name == \"$TAG\")][0].id // empty")"
+          if [ -n "$id" ]; then
+            echo "Reusing existing release $id for $TAG"
+          else
+            id="$(gh api -X POST "repos/$REPO/releases" \
+                    -f tag_name="$TAG" \
+                    -f name="Plume $TAG" \
+                    -F draft=true \
+                    --jq '.id')"
+            echo "Created draft release $id for $TAG"
+          fi
+          echo "release_id=$id" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: create-release
     permissions:
       contents: write
     strategy:
@@ -70,16 +115,17 @@ jobs:
           VITE_APP_VERSION: ${{ github.ref_name }}
           VITE_APP_ARCH: ${{ matrix.rust-targets }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: "Plume ${{ github.ref_name }}"
-          releaseDraft: true
+          # 指定 releaseId 後 tauri-action 只上傳、不查也不建，競態消失。
+          # tagName / releaseName / releaseDraft 是「建立」時才用得到的參數，已無作用。
+          releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
 
   # 三平台 build 全數成功後自動把 draft 轉為正式發布。needs: build 確保產物齊全才公開，
   # 避免單純關掉 draft 時，第一個完成的平台搶先公開、其餘平台檔案還沒上傳的空窗。
   # 任一平台 build 失敗則此 job 不執行，release 留在 draft（安全）。
   publish:
-    needs: build
+    # 也 needs create-release：既為了取它的 release_id output，也讓依賴關係與實際用到的東西一致。
+    needs: [create-release, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -132,8 +178,11 @@ jobs:
       - name: Publish release with notes once all platforms are uploaded
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
         run: |
-          gh release edit "${{ github.ref_name }}" \
-            --notes-file release-notes.md \
-            --draft=false \
-            --repo "${{ github.repository }}"
+          # 用 release id 而非 tag name：`gh release edit <tag>` 在同一個 tag 有多個 release 時
+          # 只會挑到其中一個，v0.16.0 正是這樣把 x64 那份轉正式、Apple Silicon 那份留在 draft。
+          # 即使上游競態已修，這裡仍該指名 id——publish 是最後一道，不該靠「只會有一個」的假設。
+          jq -n --rawfile body release-notes.md '{body: $body, draft: false}' \
+            | gh api -X PATCH "repos/$REPO/releases/$RELEASE_ID" --input -
