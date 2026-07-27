@@ -193,6 +193,27 @@ async fn pick_codex_root(app: tauri::AppHandle) -> Result<Option<CodexPick>, Str
     }))
 }
 
+// 翻譯真相唯一來源是 repo 的 locales/*.json（前端 i18n.ts 亦 import 同一組檔案，
+// 編譯期內嵌保證兩端同步）。只在使用者語言包不存在時種下初始檔。
+// 放 module scope 讓 mod tests 能對這張表做語義斷言——測試若只 grep 原始碼字串，
+// 把檔名改成 "ja.json.disabled" 或用區塊註解包起來都能騙過去。
+const SEEDS: &[(&str, &str)] = &[
+    ("zh_Hant.json", include_str!("../../locales/zh_Hant.json")),
+    ("en.json", include_str!("../../locales/en.json")),
+    ("zh_Hans.json", include_str!("../../locales/zh_Hans.json")),
+    ("ja.json", include_str!("../../locales/ja.json")),
+];
+
+// 語言包目錄是使用者可寫的（UI 有「開啟語言包資料夾」入口），檔名會成為前端
+// `allLocales[code]` 的 key。`__proto__.json` 會讓那個寫入穿到 Object.prototype
+// ——Tauri 的 freezePrototype 預設關閉，本專案也沒開。擋在 Rust 這側，讓危險 key
+// 根本不進 IPC。
+const UNSAFE_LOCALE_KEYS: [&str; 3] = ["__proto__", "constructor", "prototype"];
+
+fn is_unsafe_locale_key(stem: &str) -> bool {
+    UNSAFE_LOCALE_KEYS.contains(&stem)
+}
+
 #[tauri::command]
 fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
@@ -201,16 +222,7 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
         std::fs::create_dir_all(&locales_dir).map_err(|e| e.to_string())?;
     }
 
-    // 翻譯真相唯一來源是 repo 的 locales/*.json（前端 i18n.ts 亦 import 同一組檔案，
-    // 編譯期內嵌保證兩端同步）。此處只在使用者語言包不存在時種下初始檔。
-    const SEEDS: [(&str, &str); 4] = [
-        ("zh_Hant.json", include_str!("../../locales/zh_Hant.json")),
-        ("en.json", include_str!("../../locales/en.json")),
-        ("zh_Hans.json", include_str!("../../locales/zh_Hans.json")),
-        ("ja.json", include_str!("../../locales/ja.json")),
-    ];
-
-    for (filename, content) in SEEDS {
+    for &(filename, content) in SEEDS {
         let path = locales_dir.join(filename);
         if !path.exists() {
             let _ = std::fs::write(&path, content);
@@ -224,6 +236,9 @@ fn load_locales(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
             let path = entry.path();
             if path.is_file() && path.extension().and_then(|ext| ext.to_str()) == Some("json") {
                 if let Some(filename) = path.file_stem().and_then(|s| s.to_str()) {
+                    if is_unsafe_locale_key(filename) {
+                        continue;
+                    }
                     if let Ok(content_str) = std::fs::read_to_string(&path) {
                         if let Ok(json_val) = serde_json::from_str::<serde_json::Value>(&content_str) {
                             locales.insert(filename.to_string(), json_val);
@@ -873,6 +888,47 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // 漏一份 SEEDS，新使用者就永遠拿不到那個語言的種子檔，而且沒有任何錯誤訊號。
+    // 對真實目錄做雙向斷言——先前這條守在 TS 側 grep lib.rs 原始碼，擋不住把檔名
+    // 改成 "ja.json.disabled"（字串仍在）或用區塊註解包住整張表。
+    #[test]
+    fn seeds_cover_every_locale_file() {
+        let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../locales");
+        let mut on_disk: Vec<String> = std::fs::read_dir(dir)
+            .expect("locales dir should exist")
+            .filter_map(|e| e.ok())
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .filter(|name| name.ends_with(".json"))
+            .collect();
+        on_disk.sort();
+
+        let mut seeded: Vec<String> = SEEDS.iter().map(|(name, _)| name.to_string()).collect();
+        seeded.sort();
+
+        assert_eq!(seeded, on_disk, "SEEDS 與 locales/ 目錄不同步");
+    }
+
+    // include_str! 只保證檔案存在，不保證內容是合法 JSON。種下壞檔的話 load_locales
+    // 的讀取端會 serde 解析失敗然後靜默 skip，而 exists() 讓它永遠不再重種。
+    #[test]
+    fn seeded_content_parses_as_json() {
+        for (name, content) in SEEDS {
+            serde_json::from_str::<serde_json::Value>(content)
+                .unwrap_or_else(|e| panic!("{name} 不是合法 JSON: {e}"));
+        }
+    }
+
+    // 檔名會成為前端 allLocales 的 key，`__proto__.json` 能穿到 Object.prototype。
+    #[test]
+    fn rejects_prototype_polluting_locale_names() {
+        for bad in ["__proto__", "constructor", "prototype"] {
+            assert!(is_unsafe_locale_key(bad), "{bad} 應被擋下");
+        }
+        for good in ["zh_Hant", "en", "zh_Hans", "ja", "ko"] {
+            assert!(!is_unsafe_locale_key(good), "{good} 不該被擋");
+        }
+    }
 
     // 每一條都是實測確認過會發出真實外連請求的形式（2026-07-26 取證，
     // 瀏覽器引擎 + 本地 server 收證）。CSP 的 img-src 含萬用 `https:`，擋不住這些。

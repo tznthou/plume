@@ -75,10 +75,12 @@ export async function initMenu(cb: MenuCallbacks, init: MenuInit): Promise<void>
   themeRadio.length = 0;
   fontRadio.length = 0;
 
-  const MODE_GLYPHS = ["撰", "參", "閱"];
-  const MODE_KEYS = ["compose", "split", "read"] as const;
-  const MODE_LABELS = MODE_GLYPHS.map(
-    (glyph, i) => `${glyph} ${t(`menu.${MODE_KEYS[i]}`)}`
+  // 字形跟語言走、英文詞不跟：簡中是「参／阅」、日文是「参／閲」，寫死正體會讓
+  // 選單與工具列（吃 ui.*Mode）在同一個介面語言下顯示不同字形。英文介面仍給 CJK
+  // 字形——glyph 是辨識特徵，後面的英文詞才是給非 CJK 使用者的註腳（決策 78）。
+  const MODE_KEYS = ["Compose", "Split", "Read"] as const;
+  const MODE_LABELS = MODE_KEYS.map(
+    (key) => `${t(`menu.glyph${key}`)} ${t(`menu.${key.toLowerCase()}`)}`
   );
 
   const THEME_LABELS = [
