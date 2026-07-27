@@ -6,6 +6,23 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+### Added
+
+- Simplified Chinese and Japanese locale packs, bringing the built-in set to four. Simplified Chinese uses mainland vocabulary rather than a character-shape conversion (新建／打开／保存／导出／撤销／粘贴／字号／标签页) and mainland quotation conventions; Japanese maps serif/sans to 明朝体/ゴシック体, and the night theme reuses the Japanese title of Saint-Exupéry's *Vol de Nuit*
+- Locale tests now scan the `locales/` directory dynamically and assert that the frontend registry and the Rust seed list both keep up — miss any one of the three and that language silently breaks in some contexts
+
+### Fixed
+
+- The native menu hard-coded Traditional glyphs for the three writing modes, so switching to Simplified Chinese or Japanese left the menu showing 參／閱 while the toolbar showed 参／阅 (参／閲 in Japanese) — two different glyphs under one interface language. Glyphs now follow the language; the English interface keeps the CJK glyph, which is the recognition feature, with the English word as its footnote
+
+### Security
+
+- Filenames in the locales directory became object keys on the frontend without validation. That directory is user-writable and has a UI entry point, so dropping in a `__proto__.json` polluted `Object.prototype` at startup (Tauri's `freezePrototype` defaults to off and this project does not enable it). Prototype pollution is a known route to defeating sanitizers, and DOMPurify is precisely this project's XSS defense — inside a webview where XSS reaches IPC. Dangerous keys are now rejected in Rust, with a second guard on the frontend merge
+
+### Known limitations
+
+- The Japanese pack has not been reviewed by a native speaker; some wording (the product term 冊, and the three writing modes 撰／参／閲) is still unconfirmed
+
 ## [0.15.0] - 2026-07-26
 
 ### Added

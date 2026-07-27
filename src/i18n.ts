@@ -2,17 +2,31 @@ import { invoke } from "@tauri-apps/api/core";
 import { load, type Store } from "@tauri-apps/plugin-store";
 import zhHant from "../locales/zh_Hant.json";
 import en from "../locales/en.json";
+import zhHans from "../locales/zh_Hans.json";
+import ja from "../locales/ja.json";
 
 const STORE_FILE = "settings.json";
 const STORE_KEY = "language";
 const DEFAULT_LANG: string = "zh_Hant";
+
+// 語言包來自使用者可寫的目錄，檔名與 section 名都會成為物件 key。`__proto__` 這種 key
+// 走 IPC（response.json() 解析，是真的 own property）後，`allLocales[lang][section] = …`
+// 會寫穿到 Object.prototype——Tauri 的 freezePrototype 預設關閉，本專案沒開。
+// Rust 端已擋檔名，這裡再擋一層：merge 這個 pattern 本身可能被複製到別處。
+const UNSAFE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 let storePromise: Promise<Store> | null = null;
 let activeLang = DEFAULT_LANG;
 // 翻譯真相唯一來源是 locales/*.json（Rust 端 load_locales 亦 include_str! 同一組檔案）。
 // 此處為 disk 語言包缺鍵時的 fallback；淺拷貝讓 initI18n 的 merge 打在副本上，不動 module export
 // ——它只寫到 section 層（allLocales[lang][section] = {...}），拷貝深度對齊寫入深度即足夠。
-let allLocales: Record<string, any> = { zh_Hant: { ...zhHant }, en: { ...en } };
+// 宣告順序即語言選單順序：新語言 append 在後，不動 zh_Hant/en 既有位置。
+let allLocales: Record<string, any> = {
+  zh_Hant: { ...zhHant },
+  en: { ...en },
+  zh_Hans: { ...zhHans },
+  ja: { ...ja },
+};
 let changeCallback: (() => void) | null = null;
 
 function getStore(): Promise<Store> {
@@ -116,10 +130,12 @@ export async function initI18n(): Promise<void> {
     const loaded = await invoke<Record<string, any>>("load_locales");
     // Deep merge loaded locales into allLocales to preserve static fallbacks for new keys
     for (const [lang, data] of Object.entries(loaded)) {
+      if (UNSAFE_KEYS.has(lang)) continue;
       if (!allLocales[lang]) {
         allLocales[lang] = {};
       }
       for (const [section, keys] of Object.entries(data)) {
+        if (UNSAFE_KEYS.has(section)) continue;
         if (typeof keys === "object" && keys !== null) {
           allLocales[lang][section] = {
             ...allLocales[lang][section],
@@ -132,7 +148,8 @@ export async function initI18n(): Promise<void> {
     }
   } catch (err) {
     console.error("Failed to load locales from Rust backend", err);
-    // 保留載入時已 statically 宣告之完整預設語系（zh_Hant 和 en），不予覆寫
+    // 保留 module 內建的 static registry，不予覆寫（此處刻意不列舉語言碼——
+    // 每加一種語言就多一處要記得改，正是這類註解會過時的原因）
   }
 
   try {

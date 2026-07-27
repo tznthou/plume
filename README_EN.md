@@ -62,7 +62,7 @@ Plume splits reading and writing into three modes — Compose (immersive writing
 |---------|--------------|
 | **Themes** | Built-in Vol de Nuit (dark), Inkstone (light), Office 97 (retro), and Auto (follows system). Office 97 is a faithful revival of raised buttons, pixel-art icons, and that blue title bar you forgot you missed |
 | **Custom themes** | Drop a CSS file into the `themes/` folder and it becomes a new theme. The settings panel lets you switch instantly; three bundled templates (Emerald Forest, Nordic Frost, Office 97) are ready to remix |
-| **Multi-language** | Ships with Traditional Chinese and English. The language selector switches the entire UI live — toolbar, native menus, dialogs, shortcut overlay, and status bar. Drop a JSON file into `locales/` to add a new language |
+| **Multi-language** | Ships with Traditional Chinese, English, Simplified Chinese, and Japanese (Simplified Chinese uses mainland vocabulary, not a character conversion; Japanese awaits native-speaker review). The language selector switches the entire UI live — toolbar, native menus, dialogs, shortcut overlay, and status bar. Drop a JSON file into `locales/` to add a new language |
 | **Settings panel** | One tap on the gear: theme selection, language, version info, and a one-click update checker, all in a single overlay |
 | **Reading font** | Default / Serif / Sans / Mono, with `⌘=` / `⌘-` / `⌘0` to adjust the size live (12–24px) |
 | **Native menu bar** | Plume / File / Edit / View / Help system-native menus |

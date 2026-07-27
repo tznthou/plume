@@ -78,7 +78,7 @@ flowchart TB
 | 開冊資料夾選取與核准 | `invoke("pick_codex_root")` | `allow-pick-codex-root`（自訂 command；Rust 持有原生資料夾 dialog，canonical root 加入 approved-roots 白名單後回傳 `.md` 清單，**不開目錄 fs scope**） |
 | 冊資料夾唯讀列舉 | `invoke("list_codex_files", { root })` | `allow-list-codex-files`（自訂 command；僅接受 approved-roots 內的 canonical root，遞迴列 `.md` 路徑，**不開目錄 fs scope**、skip symlink、深度上限 16） |
 | 冊移除 | `invoke("delete_codex_folder", { path })` | `allow-delete-codex-folder`（自訂 command；canonicalize 後從 approved-roots 白名單移除並持久化。**不刪磁碟上的任何檔案**——冊是唯讀掛載，移除只是收回授權） |
-| 語言包載入 | `invoke("load_locales")` | `allow-load-locales`（自訂 command；讀 `app_local_data_dir/locales/*.json` 全部檔案。zh_Hant/en 兩份**僅在不存在時**種下編譯期內嵌的內容——既有使用者的 disk 語言包因此不會被新版覆寫） |
+| 語言包載入 | `invoke("load_locales")` | `allow-load-locales`（自訂 command；讀 `app_local_data_dir/locales/*.json` 全部檔案。zh_Hant/en/zh_Hans/ja 四份**僅在不存在時**種下編譯期內嵌的內容——既有使用者的 disk 語言包因此不會被新版覆寫） |
 | 開啟語言包資料夾 | `invoke("open_locales_dir")` | `allow-open-locales-dir`（自訂 command；`tauri_plugin_opener::open_path` free function——它收 `AsRef<Path>` 保留原始 path bytes，而 `OpenerExt::open_path` 收 `Into<String>`，非 UTF-8 路徑會被 lossy 轉成開不到的路徑） |
 | 自訂主題載入 | `invoke("load_custom_themes")` | `allow-load-custom-themes`（自訂 command；讀 `app_local_data_dir/themes/*.css`，**每份都過 `sanitize_theme_css`**；首次執行種下三個範本。見下方「自訂主題 CSS」） |
 | 開啟主題資料夾 | `invoke("open_themes_dir")` | `allow-open-themes-dir`（自訂 command；同 `open_locales_dir` 的 free function 理由） |
