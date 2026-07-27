@@ -6,6 +6,8 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-07-27
+
 ### Added
 
 - Simplified Chinese and Japanese locale packs, bringing the built-in set to four. Simplified Chinese uses mainland vocabulary rather than a character-shape conversion (新建／打开／保存／导出／撤销／粘贴／字号／标签页) and mainland quotation conventions; Japanese maps serif/sans to 明朝体/ゴシック体, and the night theme reuses the Japanese title of Saint-Exupéry's *Vol de Nuit*
