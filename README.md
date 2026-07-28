@@ -116,7 +116,7 @@ flowchart LR
 | mermaid | 11.x | 圖表渲染（懶載入，`securityLevel: "strict"`） |
 | DOMPurify | 3.x | 渲染輸出 XSS 消毒（必備，見 SPEC 安全章節） |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
-| Vitest | 4.x | 單元測試（96 個，渲染管線、冊樹建構、主題、設定、分頁、焦點管理、i18n） |
+| Vitest | 4.x | 單元測試（99 個，渲染管線、冊樹建構、主題、設定、分頁、焦點管理、i18n） |
 
 > Front matter 隱藏改用 `render()` 前置 regex 剝除，不走 `markdown-it-front-matter`——該套件對「以 `---` 開頭但無閉合」的文件有整段吃掉的 edge case。
 
@@ -140,9 +140,11 @@ flowchart LR
 
 前置需求：
 
-- macOS 13+（開發機已驗證：rustc 1.88 / Node 22 / Xcode CLT）
-- Rust toolchain（`rustup`）
-- Node.js 22+ 與 npm
+- macOS 13+ 與 Xcode Command Line Tools
+- [`rustup`](https://rustup.rs)——Rust 版本釘在 `rust-toolchain.toml`（目前 1.97.1），進到專案目錄 rustup 會自己裝對版本，不必手動指定
+- Node.js 22 與 npm——版本寫在 `.node-version` 與 `package.json` 的 `engines`，nvm / fnm 這類版本管理器讀得到
+
+> 這兩個版本檔 release CI 的建置 job 也會讀，本機與 CI 用的是同一份宣告，要升版改那兩行即可。
 
 ```bash
 git clone https://github.com/tznthou/plume.git && cd plume
@@ -179,7 +181,8 @@ markdown-tool/
 │   ├── dialog-focus.ts     # 浮層焦點管理：Tab 環繞、關閉後還原原焦點
 │   ├── context-menu.ts     # 右鍵選單：編輯區/預覽區分別對應操作
 │   ├── statusbar.ts        # 狀態列：字數/行數/渲染時間/未儲存指示
-│   └── style.css           # 版面 + 四主題 + 撰／參／閱 三態 + 預覽 typography
+│   ├── style.css           # 版面 + 四主題 + 撰／參／閱 三態 + 預覽 typography
+│   └── types/              # 型別宣告：`?raw` import、無型別的 markdown-it 外掛
 ├── src-tauri/              # Rust 核心
 │   ├── src/lib.rs          # Tauri 啟動 + plugin 註冊 + 自訂 commands
 │   ├── capabilities/       # IPC 權限宣告（最小化原則）
@@ -190,6 +193,8 @@ markdown-tool/
 │   ├── PRD.md              # 需求與使用者故事
 │   ├── SPEC.md             # 架構、模組職責、IPC 邊界、安全
 │   └── PLAN.md             # 實作路線圖與冒煙清單
+├── .node-version           # Node 版本宣告（本機與 CI 同源）
+├── rust-toolchain.toml     # Rust toolchain 版本宣告（同上）
 ├── CHANGELOG.md            # 版本紀錄（中文，另有 CHANGELOG_EN.md）
 ├── LICENSE                 # Apache 2.0
 ├── README.md               # 中文說明（本檔）

@@ -116,7 +116,7 @@ flowchart LR
 | mermaid | 11.x | Diagram rendering (lazy-loaded, `securityLevel: "strict"`) |
 | DOMPurify | 3.x | XSS sanitization of rendered output (non-negotiable, see SPEC) |
 | Tauri Plugins | 2.x | dialog / fs / store / persisted-scope / opener |
-| Vitest | 4.x | Unit tests (96 of them — rendering pipeline, Codex tree, themes, settings, tabs, focus management, i18n) |
+| Vitest | 4.x | Unit tests (99 of them — rendering pipeline, Codex tree, themes, settings, tabs, focus management, i18n) |
 
 > Front matter hiding uses a regex strip ahead of `render()` rather than `markdown-it-front-matter` — that package has an edge case where a document starting with `---` but never closing it gets swallowed whole.
 
@@ -140,9 +140,11 @@ Grab the installer for your platform from [Releases](https://github.com/tznthou/
 
 Prerequisites:
 
-- macOS 13+ (verified dev setup: rustc 1.88 / Node 22 / Xcode CLT)
-- Rust toolchain (`rustup`)
-- Node.js 22+ and npm
+- macOS 13+ with Xcode Command Line Tools
+- [`rustup`](https://rustup.rs) — the Rust version is pinned in `rust-toolchain.toml` (1.97.1 at the moment); rustup honours it inside the project, so there's nothing to switch by hand
+- Node.js 22 and npm — declared in `.node-version` and the `engines` field of `package.json`, which nvm / fnm read directly
+
+> The release CI build job reads those same two files, so a local build and a CI build never disagree on the toolchain. Bumping a version is one line in each.
 
 ```bash
 git clone https://github.com/tznthou/plume.git && cd plume
@@ -179,7 +181,8 @@ markdown-tool/
 │   ├── dialog-focus.ts     # modal focus: Tab cycling, restore focus on close
 │   ├── context-menu.ts     # context menu: editor/preview with tailored actions
 │   ├── statusbar.ts        # status bar: word/line count, render time, unsaved indicator
-│   └── style.css           # layout + four themes + Compose/Split/Read modes + preview typography
+│   ├── style.css           # layout + four themes + Compose/Split/Read modes + preview typography
+│   └── types/              # type declarations: `?raw` imports, untyped markdown-it plugins
 ├── src-tauri/              # Rust core
 │   ├── src/lib.rs          # Tauri bootstrap + plugins + custom commands
 │   ├── capabilities/       # IPC permission declarations (least privilege)
@@ -190,6 +193,8 @@ markdown-tool/
 │   ├── PRD.md              # requirements and user stories
 │   ├── SPEC.md             # architecture, module boundaries, IPC, security
 │   └── PLAN.md             # roadmap and smoke checklist
+├── .node-version           # Node version — one source for local dev and CI
+├── rust-toolchain.toml     # Rust toolchain version — likewise
 ├── CHANGELOG.md            # version history (Chinese; CHANGELOG_EN.md alongside)
 ├── LICENSE                 # Apache 2.0
 ├── README.md               # Chinese README
