@@ -6,6 +6,19 @@ This file tracks notable changes to Plume. Format inspired by [Keep a Changelog]
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-07-28
+
+The app is byte-for-byte the same experience as 0.16.0. This release exists for one reason: so that Apple Silicon users can actually download an installer.
+
+### Fixed
+
+- The v0.16.0 download page was missing the Apple Silicon `.dmg` and `.app.tar.gz`. Three platform jobs were racing to create the release — x64 created one, Apple Silicon queried a second later, still couldn't see it, and created another. One version, two releases, with the Apple Silicon files stranded in a draft nobody could reach. Creating the release is now a single job that runs first; the platform jobs only upload, so there is nothing left to race over
+- That rework was exercised end to end with a throwaway version tag before shipping this one: six artifacts present, one release per tag. The lesson from last time was that all five CI jobs went green while two artifacts silently went missing — a green run proves no step failed, not that everything shipped
+
+### Changed
+
+- Build toolchain versions are now declared inside the repo: Node in `.node-version`, Rust in `rust-toolchain.toml` (1.97.1), with CI reading both files directly. When building from source, `rustup` and `nvm`/`fnm` pick up the right versions on their own — no more matching numbers by hand against the docs
+
 ## [0.16.0] - 2026-07-27
 
 ### Added
