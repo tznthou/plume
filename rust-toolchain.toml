@@ -1,0 +1,10 @@
+# Rust toolchain 的單一真相來源。
+#
+# rustup 讀這個檔決定本機用哪一版；release CI 的 build job 也從這裡讀
+# （見 .github/workflows/release.yml 的 "read rust toolchain" step），
+# 所以版本只宣告一次，不會出現本機與 CI 各跑各的。
+#
+# 釘精確版本而非 "stable"：Plume 要產出 release binary，浮動的建置環境
+# 等於放棄重現性。升級時改下面那一行即可，本機 rustup 與 CI 會一起跟上。
+[toolchain]
+channel = "1.97.1"

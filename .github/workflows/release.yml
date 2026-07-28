@@ -15,6 +15,11 @@ jobs:
   audit:
     name: Cargo audit (supply chain)
     runs-on: ubuntu-latest
+    # 刻意不跟隨 rust-toolchain.toml：這個 job 只比對 Cargo.lock 與 advisory DB，跟產物無關，
+    # 而 cargo-audit 自己的安裝需要夠新的 rustc。RUSTUP_TOOLCHAIN 的優先序高於 toml，
+    # 沒有這行的話 toml 會讓這裡改用釘住的舊版編譯 cargo-audit，某天就會無聲卡住。
+    env:
+      RUSTUP_TOOLCHAIN: stable
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -93,8 +98,17 @@ jobs:
           node-version-file: .node-version
           cache: npm
 
-      - uses: dtolnay/rust-toolchain@stable
+      # 版本只宣告在 rust-toolchain.toml，這裡讀出來傳給 action。
+      # 這個 action 沒有讀 toml 的能力（toolchain 是 required input），若在 workflow 另寫
+      # 一份版本號，兩邊遲早分岔而且沒有東西會發現 —— 跟 Node 那邊改用 node-version-file 同理。
+      - name: Read rust toolchain
+        id: rust
+        shell: bash
+        run: echo "channel=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: ${{ steps.rust.outputs.channel }}
           targets: ${{ matrix.rust-targets }}
 
       - uses: swatinem/rust-cache@v2
