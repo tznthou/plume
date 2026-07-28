@@ -134,7 +134,7 @@ flowchart LR
 
 > **macOS 首次開啟**：安裝檔未經 Apple 公證，Gatekeeper 會攔下。對 Plume.app 按右鍵 →「打開」確認一次即可。
 >
-> **Windows（實驗性）**：CI 自動打包，安裝檔未經程式碼簽章，Windows SmartScreen 會顯示警告。未在實機完整驗證（輸入法、檔案對話框等），遇到問題請開 issue。
+> **Windows（實驗性）**：CI 自動打包，安裝檔未經程式碼簽章，Windows SmartScreen 會顯示警告。基本流程已在實機走過一輪（中文輸入法打字、開檔／存檔對話框、`.md` 檔案關聯、閱讀編輯預覽），但開發與日常使用都在 macOS，Windows 未經長期使用，遇到問題請開 issue。
 
 ### 從原始碼建置
 

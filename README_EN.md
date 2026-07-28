@@ -134,7 +134,7 @@ Grab the installer for your platform from [Releases](https://github.com/tznthou/
 
 > **First launch on macOS:** the app isn't notarized, so Gatekeeper will block it. Right-click Plume.app → "Open" and confirm once.
 >
-> **Windows (experimental):** built by CI without code signing — SmartScreen will show a warning. Not fully field-tested (IME, file dialogs). Open an issue if something breaks.
+> **Windows (experimental):** built by CI without code signing — SmartScreen will show a warning. The basics have been walked through on real hardware (Chinese IME input, open/save dialogs, `.md` file association, the read-edit-preview loop), but development and daily use both happen on macOS, so Windows hasn't seen sustained use. Open an issue if something breaks.
 
 ### Build from source
 
