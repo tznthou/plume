@@ -21,8 +21,13 @@ jobs:
     env:
       RUSTUP_TOOLCHAIN: stable
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v7
+      # 用 @v1 tag 而非 @stable branch：branch ref 隨時可被移動，tag 至少有版本語意。
+      # 代價是 @v1 的 toolchain 是 required input（@stable branch 才有 default: stable），
+      # 所以這裡得把 stable 明寫出來——反正決策上這個 job 本來就要跟 rust-toolchain.toml 分道揚鑣。
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
       # cargo install 需編譯（約 2-3 分鐘）；release 不頻繁可接受，嫌慢可改用 prebuilt binary。
       - run: cargo install cargo-audit --locked
       - run: cargo audit
@@ -91,9 +96,9 @@ jobs:
             rust-targets: ""
     runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: .node-version
           cache: npm
@@ -106,7 +111,9 @@ jobs:
         shell: bash
         run: echo "channel=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
 
-      - uses: dtolnay/rust-toolchain@master
+      # @v1 而非 @master：master 是開發分支，任何 push 進去就直接進到我們的建置環境，
+      # 中間沒有版本閘門。功能上兩者相同（都要求明寫 toolchain）。
+      - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ steps.rust.outputs.channel }}
           targets: ${{ matrix.rust-targets }}
@@ -123,14 +130,18 @@ jobs:
       # src-tauri 的 #[cfg(test)] 在 CI 一次都不會跑，退化會直接出貨。
       - run: cargo test --manifest-path src-tauri/Cargo.toml
 
-      - uses: tauri-apps/tauri-action@v0
+      # v1 起 .app.tar.gz 會跟其他產物一樣帶版本號（Plume_aarch64.app.tar.gz →
+      # Plume_0.16.1_aarch64.app.tar.gz）。六件產物的組成不變，只有這兩件改名。
+      - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_APP_VERSION: ${{ github.ref_name }}
           VITE_APP_ARCH: ${{ matrix.rust-targets }}
         with:
           # 指定 releaseId 後 tauri-action 只上傳、不查也不建，競態消失。
-          # tagName / releaseName / releaseDraft 是「建立」時才用得到的參數，已無作用。
+          # tagName / releaseName / releaseDraft 是「建立」時才用得到的參數，已無作用——
+          # v1 新增的「更新既有 release 的 name 與 body」也在同一條 `tagName && !releaseId`
+          # 路徑裡，我們指定了 releaseId 就整段跳過，publish 組的 release notes 不會被它蓋掉。
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
 
@@ -144,7 +155,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # Release notes 取自雙語 CHANGELOG 的該版段落。刻意不用 tauri-action 的 releaseBody：
       # 那個 input 會在三平台 matrix 各跑一次，還得應付 Windows runner 的 shell 差異；
