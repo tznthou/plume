@@ -21,7 +21,13 @@ jobs:
     env:
       RUSTUP_TOOLCHAIN: stable
     steps:
+      # persist-credentials 預設是 true——checkout 會把 GITHUB_TOKEN 寫進磁碟留給後續 step。
+      # 三個 job 都不靠 git 憑證做事（tauri-action 走 octokit + GITHUB_TOKEN 環境變數、
+      # publish 走 gh api 同一個變數、這裡完全沒有 git 操作），留著只是讓 npm postinstall
+      # 與 cargo build script 這類第三方程式碼多一個能撿到 token 的地方。三處一律關掉。
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       # 用 @v1 tag 而非 @stable branch：branch ref 隨時可被移動，tag 至少有版本語意。
       # 代價是 @v1 的 toolchain 是 required input（@stable branch 才有 default: stable），
       # 所以這裡得把 stable 明寫出來——反正決策上這個 job 本來就要跟 rust-toolchain.toml 分道揚鑣。
@@ -97,6 +103,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v7
         with:
@@ -156,6 +164,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Release notes 取自雙語 CHANGELOG 的該版段落。刻意不用 tauri-action 的 releaseBody：
       # 那個 input 會在三平台 matrix 各跑一次，還得應付 Windows runner 的 shell 差異；
