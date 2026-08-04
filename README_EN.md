@@ -208,9 +208,16 @@ See the [CHANGELOG](CHANGELOG_EN.md) for the version history.
 | Item | Status |
 |------|--------|
 | Apple notarization + auto-update | Planned |
+| Simplified Chinese + Japanese locales | v0.16.0 ✓ |
+| Tab shortcuts + accessibility | v0.15.0 ✓ |
+| Per-tab history + context menu | v0.14.0 ✓ |
 | Custom themes | v0.13.0 ✓ |
 | Settings panel + update checker | v0.13.0 ✓ |
+| Multi-language support | v0.12.0 ✓ |
+| Multi-tab editing | v0.11.0 ✓ |
 | PDF export | v0.10.0 ✓ |
+| Codex folder browsing | v0.9.0 ✓ |
+| Compose / Split / Read modes | v0.8.0 ✓ |
 
 ---
 
