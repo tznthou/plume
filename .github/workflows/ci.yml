@@ -1,0 +1,84 @@
+# PR 與 main 的基本閘門：型別檢查、前端測試、Rust 測試、clippy。
+# 在此之前 repo 只有 release.yml（僅 tag 觸發），意味著 PR 上的測試從來沒有被執行過——
+# 測試檔存在不等於測試有跑，兩者之間差的正是這個檔案。
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# 刻意用 pull_request 而非 pull_request_target。後者以 base repo 的身分執行、
+# 帶得動寫入權限的 token，而 fork 送來的程式碼會在那個環境裡跑——外部貢獻者的 PR
+# 正是這條 workflow 的主要服務對象，用 pull_request_target 等於把 repo 交出去。
+# pull_request 對 fork 一律唯讀且無 secrets，正是我們要的預設。
+permissions:
+  contents: read
+
+# 同一分支連續 push 時取消還在跑的舊 run；main 不取消（push 到 main 的結果是基準線，
+# 每個 commit 的綠燈都該留下記錄）。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  frontend:
+    name: Frontend (tsc + vitest)
+    runs-on: ubuntu-latest
+    steps:
+      # persist-credentials 預設 true 會把 token 寫進磁碟留給後續 step，
+      # 而 npm ci 會執行第三方 postinstall。理由與取捨同 release.yml，三處一律關掉。
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - run: npm ci
+
+      # `npm run build` 是 `tsc && vite build`——真正要的是 tsc 的型別檢查，
+      # 型別錯誤在 vitest 裡不會現形（vitest 用 esbuild 轉譯，不做型別檢查）。
+      - name: Type-check and build
+        run: npm run build
+
+      - run: npm run test
+
+  rust:
+    name: Rust (cargo test + clippy)
+    # 跑在 macOS 而非 ubuntu：Tauri 在 Linux 要先裝 webkit2gtk / gtk 開發套件才編得起來，
+    # 而我們根本不出 Linux 版（release.yml 只有 macOS ×2 與 Windows）。
+    # 為了一個不出貨的平台維護一串 apt 依賴，是拿維護成本換不存在的覆蓋率。
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # 版本只宣告在 rust-toolchain.toml，這裡讀出來傳給 action——這個 action 沒有讀 toml
+      # 的能力（toolchain 是 required input）。做法與 release.yml 的 build job 一致，
+      # 兩條 workflow 各寫一份版本號的話遲早分岔，而且沒有東西會發現。
+      - name: Read rust toolchain
+        id: rust
+        run: echo "channel=$(sed -n 's/^channel *= *"\(.*\)"/\1/p' rust-toolchain.toml)" >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ steps.rust.outputs.channel }}
+          components: clippy
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # 不需要先建前端：dev profile 下 generate_context! 走 devUrl 而不嵌入 frontendDist，
+      # 所以沒有 dist/ 也編得過（已實測）。release.yml 的 build job 同樣在 tauri-action
+      # 之前就跑 cargo test，靠的是同一件事。
+      - run: cargo test --manifest-path src-tauri/Cargo.toml
+
+      # 現況零 warning，所以直接用 -D warnings 守住，不留「先警告再說」的灰帶。
+      # 刻意不加 cargo fmt --check：build.rs 目前與 rustfmt 有差異，把它納入等於逼這條
+      # 補 CI 的 PR 順手改格式。要收 fmt 就另開一個 PR 先把格式對齊。
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
