@@ -33,6 +33,9 @@ export function initEditor(parent: HTMLElement): void {
     parent,
     extensions: baseExtensions,
   });
+  if (typeof window !== "undefined") {
+    (window as any).plumeInsertText = insertText;
+  }
 }
 
 export function getContent(): string {
@@ -41,6 +44,21 @@ export function getContent(): string {
 
 export function getLineCount(): number {
   return view!.state.doc.lines; // O(1)，狀態列用
+}
+
+export function insertText(text: string): void {
+  if (!view) return;
+  const selection = view.state.selection.main;
+  view.dispatch({
+    changes: { from: selection.from, to: selection.to, insert: text },
+    selection: { anchor: selection.from + text.length },
+    scrollIntoView: true,
+  });
+  view.focus();
+}
+
+if (typeof window !== "undefined") {
+  (window as any).plumeInsertText = insertText;
 }
 
 // 編輯區真正的捲動容器（.cm-scroller），供 preview 同步捲動監聽（Task 5）。

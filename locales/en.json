@@ -61,9 +61,19 @@
     "customThemesGroup": "Custom Themes",
     "tabList": "Tab list",
     "closeTab": "Close tab",
-    "untitled": "Untitled"
+    "untitled": "Untitled",
+    "plugins": "Plugins",
+    "importPlugin": "Import Plugin (.zip)",
+    "openPluginsFolder": "Plugins Folder",
+    "noPlugins": "No plugins installed",
+    "enablePlugin": "Enable",
+    "disablePlugin": "Disable",
+    "deletePlugin": "Delete Plugin",
+    "importPluginErrorTitle": "Import Plugin Failed"
   },
   "dialogs": {
+    "deletePluginConfirmTitle": "Delete Plugin",
+    "deletePluginConfirmMessage": "Are you sure you want to delete plugin '{name}'?",
     "openCodexErrorTitle": "Open Codex Failed",
     "openCodexErrorMessage": "Cannot open folder.",
     "importCodexErrorTitle": "Import Codex Failed",

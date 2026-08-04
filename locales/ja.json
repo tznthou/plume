@@ -61,9 +61,19 @@
     "customThemesGroup": "カスタムテーマ",
     "tabList": "タブリスト",
     "closeTab": "タブを閉じる",
-    "untitled": "無題"
+    "untitled": "無題",
+    "plugins": "プラグイン",
+    "importPlugin": "プラグインを読み込む (.zip)",
+    "openPluginsFolder": "プラグインフォルダ",
+    "noPlugins": "プラグインが未インストールです",
+    "enablePlugin": "有効",
+    "disablePlugin": "無効",
+    "deletePlugin": "プラグインを削除",
+    "importPluginErrorTitle": "プラグインの読み込みに失敗しました"
   },
   "dialogs": {
+    "deletePluginConfirmTitle": "プラグインを削除",
+    "deletePluginConfirmMessage": "プラグイン「{name}」を削除してもよろしいですか？",
     "openCodexErrorTitle": "冊を開けませんでした",
     "openCodexErrorMessage": "フォルダを開けません。",
     "importCodexErrorTitle": "冊を読み込めませんでした",

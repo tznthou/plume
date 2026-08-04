@@ -195,6 +195,14 @@
               <option value="" selected disabled data-i18n="ui.language">語言</option>
             </select>
           </div>
+          <div class="settings-row settings-plugin-row">
+            <label class="settings-label" data-i18n="ui.plugins">外掛程式</label>
+            <div class="settings-plugin-actions">
+              <button id="btn-import-plugin" type="button" class="settings-btn-secondary" data-i18n="ui.importPlugin">匯入外掛程式 (.zip)</button>
+              <button id="btn-open-plugins" type="button" class="settings-btn-secondary" title="開啟外掛目錄" data-i18n-title="ui.openPluginsFolder" data-i18n="ui.openPluginsFolder">📂 外掛目錄</button>
+            </div>
+          </div>
+          <div id="plugin-list" class="plugin-list"></div>
           <div class="settings-row">
             <span class="settings-label" data-i18n="ui.version">版本</span>
             <div class="settings-version-group">

@@ -809,6 +809,510 @@ html[data-theme="inkstone-custom"] {
     load_custom_themes(app)
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginManifest {
+    pub id: String,
+    pub name: serde_json::Value,
+    pub version: String,
+    pub description: Option<serde_json::Value>,
+    pub author: Option<String>,
+    pub icon: Option<String>,
+    pub script: Option<String>,
+    pub locales: Option<serde_json::Value>,
+    #[serde(default)]
+    pub dir_path: String,
+    pub icon_content: Option<String>,
+    pub script_content: Option<String>,
+}
+
+fn base64_encode(data: &[u8]) -> String {
+    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((data.len() + 2) / 3 * 4);
+    let mut i = 0;
+    while i < data.len() {
+        let b0 = data[i];
+        let b1 = if i + 1 < data.len() { data[i + 1] } else { 0 };
+        let b2 = if i + 2 < data.len() { data[i + 2] } else { 0 };
+
+        out.push(ALPHABET[(b0 >> 2) as usize] as char);
+        out.push(ALPHABET[(((b0 & 0x03) << 4) | (b1 >> 4)) as usize] as char);
+        if i + 1 < data.len() {
+            out.push(ALPHABET[(((b1 & 0x0F) << 2) | (b2 >> 6)) as usize] as char);
+        } else {
+            out.push('=');
+        }
+        if i + 2 < data.len() {
+            out.push(ALPHABET[(b2 & 0x3F) as usize] as char);
+        } else {
+            out.push('=');
+        }
+        i += 3;
+    }
+    out
+}
+
+fn extract_zip_archive(zip_path: &std::path::Path, target_dir: &std::path::Path) -> Result<(), String> {
+    let file = std::fs::File::open(zip_path).map_err(|e| e.to_string())?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+        let outpath = match file.enclosed_name() {
+            Some(path) => target_dir.join(path),
+            None => continue,
+        };
+        if file.name().ends_with('/') {
+            let _ = std::fs::create_dir_all(&outpath);
+        } else {
+            if let Some(p) = outpath.parent() {
+                if !p.exists() {
+                    let _ = std::fs::create_dir_all(p);
+                }
+            }
+            if let Ok(mut outfile) = std::fs::File::create(&outpath) {
+                let _ = std::io::copy(&mut file, &mut outfile);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn parse_plugin_dir(dir: &std::path::Path) -> Option<PluginManifest> {
+    let manifest_path = if dir.join("plugin.json").is_file() {
+        dir.join("plugin.json")
+    } else if dir.join("manifest.json").is_file() {
+        dir.join("manifest.json")
+    } else {
+        return None;
+    };
+
+    let content = std::fs::read_to_string(&manifest_path).ok()?;
+    let mut manifest: PluginManifest = serde_json::from_str(&content).ok()?;
+    manifest.dir_path = dir.to_string_lossy().into_owned();
+
+    let locales_dir = dir.join("locales");
+    if locales_dir.is_dir() {
+        let mut locales_map = if let Some(serde_json::Value::Object(map)) = manifest.locales.clone() {
+            map
+        } else {
+            serde_json::Map::new()
+        };
+
+        if let Ok(entries) = std::fs::read_dir(&locales_dir) {
+            for entry in entries.filter_map(|e| e.ok()) {
+                let path = entry.path();
+                if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("json") {
+                    if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                        if let Ok(loc_str) = std::fs::read_to_string(&path) {
+                            if let Ok(loc_json) = serde_json::from_str::<serde_json::Value>(&loc_str) {
+                                locales_map.insert(stem.to_string(), loc_json);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        manifest.locales = Some(serde_json::Value::Object(locales_map));
+    }
+
+    if let Some(ref icon_file) = manifest.icon {
+        let icon_path = dir.join(icon_file);
+        if icon_path.is_file() {
+            if let Ok(bytes) = std::fs::read(&icon_path) {
+                let ext = icon_path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("")
+                    .to_lowercase();
+                let mime = match ext.as_str() {
+                    "svg" => "image/svg+xml",
+                    "ico" => "image/x-icon",
+                    "png" => "image/png",
+                    "jpg" | "jpeg" => "image/jpeg",
+                    "webp" => "image/webp",
+                    _ => "image/png",
+                };
+                manifest.icon_content = Some(format!("data:{};base64,{}", mime, base64_encode(&bytes)));
+            }
+        }
+    }
+
+    if let Some(ref script_file) = manifest.script {
+        let script_path = dir.join(script_file);
+        if script_path.is_file() {
+            if let Ok(code) = std::fs::read_to_string(&script_path) {
+                manifest.script_content = Some(code);
+            }
+        }
+    }
+
+    Some(manifest)
+}
+
+fn create_sample_plugin(plugins_dir: &std::path::Path) {
+    let sample_dir = plugins_dir.join("sample-stamp");
+    let _ = std::fs::create_dir_all(&sample_dir);
+    let manifest_json = r#"{
+  "id": "sample-stamp",
+  "name": {
+    "zh_Hant": "時間戳記 (外掛範例)",
+    "en": "Timestamp (Sample Plugin)"
+  },
+  "version": "1.0.0",
+  "description": {
+    "zh_Hant": "在編輯器游標處插入目前時間",
+    "en": "Insert current timestamp into editor"
+  },
+  "author": "Plume",
+  "icon": "icon.svg",
+  "script": "main.js"
+}"#;
+    let _ = std::fs::write(sample_dir.join("plugin.json"), manifest_json);
+    let icon_svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></svg>"#;
+    let _ = std::fs::write(sample_dir.join("icon.svg"), icon_svg);
+    let main_js = r#"(function() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  if (typeof window.plumeInsertText === 'function') {
+    window.plumeInsertText(stamp);
+  } else {
+    alert('Timestamp: ' + stamp);
+  }
+})();"#;
+    let _ = std::fs::write(sample_dir.join("main.js"), main_js);
+
+    create_table_grid_plugin(plugins_dir);
+}
+
+fn create_table_grid_plugin(plugins_dir: &std::path::Path) {
+    let table_dir = plugins_dir.join("table-grid");
+    if table_dir.exists() {
+        return;
+    }
+    let _ = std::fs::create_dir_all(&table_dir);
+    let manifest_json = r#"{
+  "id": "table-grid",
+  "name": {
+    "zh_Hant": "表格繪製器",
+    "en": "Markdown Table Picker"
+  },
+  "version": "1.0.0",
+  "description": {
+    "zh_Hant": "拖曳拉出 N×M 格案，快速產生並插入 Markdown 表格",
+    "en": "Visually select N×M grid to insert Markdown table"
+  },
+  "author": "Plume",
+  "icon": "icon.svg",
+  "script": "main.js"
+}"#;
+    let _ = std::fs::write(table_dir.join("plugin.json"), manifest_json);
+    let icon_svg = r#"<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-toolbar"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>"#;
+    let _ = std::fs::write(table_dir.join("icon.svg"), icon_svg);
+    let main_js = r#"(function() {
+  const existingModal = document.getElementById("plume-table-picker-overlay");
+  if (existingModal) {
+    existingModal.remove();
+    return;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.id = "plume-table-picker-overlay";
+  overlay.style.position = "fixed";
+  overlay.style.top = "0";
+  overlay.style.left = "0";
+  overlay.style.width = "100vw";
+  overlay.style.height = "100vh";
+  overlay.style.backgroundColor = "rgba(0, 0, 0, 0.4)";
+  overlay.style.backdropFilter = "blur(2px)";
+  overlay.style.zIndex = "999999";
+  overlay.style.display = "flex";
+  overlay.style.alignItems = "center";
+  overlay.style.justifyContent = "center";
+
+  const card = document.createElement("div");
+  card.style.background = "var(--bg, #1e1e2e)";
+  card.style.color = "var(--fg, #cdd6f4)";
+  card.style.border = "1px solid var(--border, rgba(255, 255, 255, 0.15))";
+  card.style.borderRadius = "10px";
+  card.style.padding = "16px 20px";
+  card.style.boxShadow = "0 8px 32px rgba(0, 0, 0, 0.4)";
+  card.style.fontFamily = "var(--font-ui, system-ui, sans-serif)";
+  card.style.display = "flex";
+  card.style.flexDirection = "column";
+  card.style.alignItems = "center";
+  card.style.gap = "12px";
+  card.style.userSelect = "none";
+
+  const titleRow = document.createElement("div");
+  titleRow.style.width = "100%";
+  titleRow.style.display = "flex";
+  titleRow.style.justifyContent = "space-between";
+  titleRow.style.alignItems = "center";
+
+  const title = document.createElement("span");
+  title.style.fontWeight = "600";
+  title.style.fontSize = "14px";
+  title.textContent = "插入表格 (Insert Table)";
+
+  const closeBtn = document.createElement("button");
+  closeBtn.textContent = "✕";
+  closeBtn.style.background = "transparent";
+  closeBtn.style.border = "none";
+  closeBtn.style.color = "inherit";
+  closeBtn.style.cursor = "pointer";
+  closeBtn.style.fontSize = "14px";
+  closeBtn.addEventListener("click", () => overlay.remove());
+
+  titleRow.appendChild(title);
+  titleRow.appendChild(closeBtn);
+  card.appendChild(titleRow);
+
+  const dimensionText = document.createElement("div");
+  dimensionText.style.fontSize = "13px";
+  dimensionText.style.opacity = "0.85";
+  dimensionText.textContent = "1 × 1 表格";
+  card.appendChild(dimensionText);
+
+  const gridContainer = document.createElement("div");
+  gridContainer.style.display = "grid";
+  gridContainer.style.gridTemplateColumns = "repeat(10, 20px)";
+  gridContainer.style.gridTemplateRows = "repeat(10, 20px)";
+  gridContainer.style.gap = "4px";
+  gridContainer.style.padding = "6px";
+  gridContainer.style.background = "rgba(0, 0, 0, 0.15)";
+  gridContainer.style.borderRadius = "6px";
+
+  const MAX_ROWS = 10;
+  const MAX_COLS = 10;
+  const cells = [];
+
+  for (let r = 1; r <= MAX_ROWS; r++) {
+    for (let c = 1; c <= MAX_COLS; c++) {
+      const cell = document.createElement("div");
+      cell.style.width = "20px";
+      cell.style.height = "20px";
+      cell.style.borderRadius = "3px";
+      cell.style.border = "1px solid rgba(255, 255, 255, 0.2)";
+      cell.style.backgroundColor = "transparent";
+      cell.style.transition = "background-color 0.15s, border-color 0.15s";
+      cell.style.cursor = "pointer";
+
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+
+      cell.addEventListener("mouseenter", () => highlightGrid(r, c));
+      cell.addEventListener("click", () => {
+        insertMarkdownTable(r, c);
+        overlay.remove();
+      });
+
+      cells.push(cell);
+      gridContainer.appendChild(cell);
+    }
+  }
+
+  function highlightGrid(targetR, targetC) {
+    dimensionText.textContent = `${targetR} × ${targetC} 表格 (${targetR} 列 × ${targetC} 欄)`;
+    for (const cell of cells) {
+      const r = parseInt(cell.dataset.row, 10);
+      const c = parseInt(cell.dataset.col, 10);
+      if (r <= targetR && c <= targetC) {
+        cell.style.backgroundColor = "var(--accent, #89b4fa)";
+        cell.style.borderColor = "var(--accent, #89b4fa)";
+      } else {
+        cell.style.backgroundColor = "transparent";
+        cell.style.borderColor = "rgba(255, 255, 255, 0.2)";
+      }
+    }
+  }
+
+  function insertMarkdownTable(rows, cols) {
+    let md = "\n";
+    const headers = [];
+    for (let c = 1; c <= cols; c++) {
+      headers.push(` 標題 ${c} `);
+    }
+    md += "|" + headers.join("|") + "|\n";
+
+    const separators = [];
+    for (let c = 1; c <= cols; c++) {
+      separators.push(" --- ");
+    }
+    md += "|" + separators.join("|") + "|\n";
+
+    for (let r = 1; r <= rows; r++) {
+      const rowCells = [];
+      for (let c = 1; c <= cols; c++) {
+        rowCells.push(` 內容 ${r}-${c} `);
+      }
+      md += "|" + rowCells.join("|") + "|\n";
+    }
+    md += "\n";
+
+    if (typeof window.plumeInsertText === "function") {
+      window.plumeInsertText(md);
+    } else {
+      alert(md);
+    }
+  }
+
+  gridContainer.addEventListener("mouseleave", () => highlightGrid(1, 1));
+
+  card.appendChild(gridContainer);
+  overlay.appendChild(card);
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") {
+      overlay.remove();
+      window.removeEventListener("keydown", handleKeyDown);
+    }
+  };
+  window.addEventListener("keydown", handleKeyDown);
+
+  document.body.appendChild(overlay);
+  highlightGrid(1, 1);
+})();"#;
+    let _ = std::fs::write(table_dir.join("main.js"), main_js);
+}
+
+fn scan_plugins(plugins_dir: &std::path::Path) -> Vec<PluginManifest> {
+    let mut plugins = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(plugins_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            if name.starts_with('.') {
+                continue;
+            }
+            if path.is_dir() {
+                if let Some(manifest) = parse_plugin_dir(&path) {
+                    plugins.push(manifest);
+                } else if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                    for sub in sub_entries.filter_map(|e| e.ok()) {
+                        let sub_path = sub.path();
+                        if sub_path.is_dir() {
+                            if let Some(manifest) = parse_plugin_dir(&sub_path) {
+                                plugins.push(manifest);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    plugins.sort_by(|a, b| a.id.cmp(&b.id));
+    plugins
+}
+
+#[tauri::command]
+fn load_plugins(app: tauri::AppHandle) -> Result<Vec<PluginManifest>, String> {
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let plugins_dir = app_dir.join("plugins");
+    if !plugins_dir.exists() {
+        std::fs::create_dir_all(&plugins_dir).map_err(|e| e.to_string())?;
+    }
+
+    if let Ok(entries) = std::fs::read_dir(&plugins_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_file() && path.extension().and_then(|s| s.to_str()).unwrap_or("").eq_ignore_ascii_case("zip") {
+                let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("extracted_plugin");
+                let dest = plugins_dir.join(stem);
+                if extract_zip_archive(&path, &dest).is_ok() {
+                    let _ = std::fs::remove_file(&path);
+                }
+            }
+        }
+    }
+
+    let mut plugins = scan_plugins(&plugins_dir);
+    if plugins.is_empty() {
+        create_sample_plugin(&plugins_dir);
+        plugins = scan_plugins(&plugins_dir);
+    }
+
+    Ok(plugins)
+}
+
+#[tauri::command]
+fn open_plugins_dir(app: tauri::AppHandle) -> Result<(), String> {
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let plugins_dir = app_dir.join("plugins");
+    if !plugins_dir.exists() {
+        std::fs::create_dir_all(&plugins_dir).map_err(|e| e.to_string())?;
+    }
+    tauri_plugin_opener::open_path(&plugins_dir, None::<&str>).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn import_plugin_zip(app: tauri::AppHandle) -> Result<Option<Vec<PluginManifest>>, String> {
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .add_filter("Plugin Archive (.zip)", &["zip"])
+        .blocking_pick_file()
+    else {
+        return Ok(None);
+    };
+
+    let zip_path = picked.into_path().map_err(|e| e.to_string())?;
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let plugins_dir = app_dir.join("plugins");
+    if !plugins_dir.exists() {
+        std::fs::create_dir_all(&plugins_dir).map_err(|e| e.to_string())?;
+    }
+
+    let stem = zip_path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .ok_or_else(|| "Invalid zip file name".to_string())?;
+    let dest_dir = plugins_dir.join(stem);
+
+    extract_zip_archive(&zip_path, &dest_dir)?;
+
+    let plugins = load_plugins(app)?;
+    Ok(Some(plugins))
+}
+
+#[tauri::command]
+fn delete_plugin(app: tauri::AppHandle, plugin_id: String) -> Result<Vec<PluginManifest>, String> {
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let plugins_dir = app_dir.join("plugins");
+
+    if let Ok(entries) = std::fs::read_dir(&plugins_dir) {
+        for entry in entries.filter_map(|e| e.ok()) {
+            let path = entry.path();
+            if path.is_dir() {
+                if let Some(manifest) = parse_plugin_dir(&path) {
+                    if manifest.id == plugin_id {
+                        let _ = std::fs::remove_dir_all(&path);
+                        break;
+                    }
+                } else if let Ok(sub_entries) = std::fs::read_dir(&path) {
+                    for sub in sub_entries.filter_map(|e| e.ok()) {
+                        let sub_path = sub.path();
+                        if sub_path.is_dir() {
+                            if let Some(manifest) = parse_plugin_dir(&sub_path) {
+                                if manifest.id == plugin_id {
+                                    let _ = std::fs::remove_dir_all(&sub_path);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    load_plugins(app)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
@@ -830,7 +1334,11 @@ pub fn run() {
             load_custom_themes,
             open_themes_dir,
             import_theme_file,
-            copy_builtin_theme_template
+            copy_builtin_theme_template,
+            load_plugins,
+            open_plugins_dir,
+            import_plugin_zip,
+            delete_plugin
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");
@@ -1032,4 +1540,20 @@ mod tests {
         let nested = r#"body { background: \5c 5c 75 rl(https://evil.example/x.png); }"#;
         assert!(!sanitize_theme_css(nested).contains("evil.example"));
     }
+
+    #[test]
+    fn parses_plugin_manifest_without_dir_path() {
+        let manifest_json = r#"{
+            "id": "test-plugin",
+            "name": "Test Plugin",
+            "version": "1.0.0",
+            "description": "A test plugin"
+        }"#;
+        let parsed: Result<PluginManifest, _> = serde_json::from_str(manifest_json);
+        assert!(parsed.is_ok(), "Failed to deserialize PluginManifest without dirPath");
+        let manifest = parsed.unwrap();
+        assert_eq!(manifest.id, "test-plugin");
+        assert_eq!(manifest.dir_path, "");
+    }
 }
+

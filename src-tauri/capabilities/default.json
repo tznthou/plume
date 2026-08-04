@@ -30,6 +30,10 @@
     "allow-load-custom-themes",
     "allow-open-themes-dir",
     "allow-import-theme-file",
-    "allow-copy-builtin-theme-template"
+    "allow-copy-builtin-theme-template",
+    "allow-load-plugins",
+    "allow-open-plugins-dir",
+    "allow-import-plugin-zip",
+    "allow-delete-plugin"
   ]
 }

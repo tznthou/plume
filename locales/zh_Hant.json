@@ -61,9 +61,19 @@
     "customThemesGroup": "自訂主題",
     "tabList": "分頁列",
     "closeTab": "關閉分頁",
-    "untitled": "未命名"
+    "untitled": "未命名",
+    "plugins": "外掛程式",
+    "importPlugin": "匯入外掛程式 (.zip)",
+    "openPluginsFolder": "外掛目錄",
+    "noPlugins": "尚無安裝的外掛程式",
+    "enablePlugin": "啟用",
+    "disablePlugin": "停用",
+    "deletePlugin": "刪除外掛",
+    "importPluginErrorTitle": "匯入外掛失敗"
   },
   "dialogs": {
+    "deletePluginConfirmTitle": "刪除外掛",
+    "deletePluginConfirmMessage": "確定要刪除外掛「{name}」嗎？",
     "openCodexErrorTitle": "開啟冊失敗",
     "openCodexErrorMessage": "無法開啟資料夾。",
     "importCodexErrorTitle": "匯入冊失敗",
