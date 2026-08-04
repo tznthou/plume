@@ -61,9 +61,19 @@
     "customThemesGroup": "自定义主题",
     "tabList": "标签页列表",
     "closeTab": "关闭标签页",
-    "untitled": "未命名"
+    "untitled": "未命名",
+    "plugins": "插件",
+    "importPlugin": "导入插件 (.zip)",
+    "openPluginsFolder": "插件目录",
+    "noPlugins": "尚无安装的插件",
+    "enablePlugin": "启用",
+    "disablePlugin": "禁用",
+    "deletePlugin": "删除插件",
+    "importPluginErrorTitle": "导入插件失败"
   },
   "dialogs": {
+    "deletePluginConfirmTitle": "删除插件",
+    "deletePluginConfirmMessage": "确定要删除插件“{name}”吗？",
     "openCodexErrorTitle": "打开册失败",
     "openCodexErrorMessage": "无法打开文件夹。",
     "importCodexErrorTitle": "导入册失败",

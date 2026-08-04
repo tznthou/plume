@@ -41,6 +41,7 @@ import { initMenu, isFocusActive, isTypewriterActive, resetWritingToolsMenu, set
 import { toggleShortcuts, hideShortcuts, clearShortcutsOverlay } from "./shortcuts";
 import { initI18n, t, currentLanguage, setLanguage, getAvailableLanguages, onLanguageChange } from "./i18n";
 import { initSettings, hideSettings } from "./settings";
+import { initPlugins, renderSettingsPluginList, renderToolbarPlugins } from "./plugins";
 
 const editorEl = document.querySelector<HTMLElement>("#editor")!;
 const previewEl = document.querySelector<HTMLElement>("#preview")!;
@@ -269,9 +270,11 @@ onLanguageChange(() => {
   clearShortcutsOverlay();
   refreshLangUI();
   renderTabs();
+  renderToolbarPlugins();
+  renderSettingsPluginList();
 });
 
-void Promise.all([initI18n(), initTheme(), initReadingPrefs()]).then(() => {
+void Promise.all([initI18n(), initTheme(), initReadingPrefs(), initPlugins()]).then(() => {
   refreshLangUI();
   refreshThemeUI();
   void rebuildMenu();

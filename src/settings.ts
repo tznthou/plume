@@ -2,6 +2,7 @@ import { getVersion } from "@tauri-apps/api/app";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { t } from "./i18n";
 import { trapFocus } from "./dialog-focus";
+import { importPluginZip, loadPluginsFromBackend, openPluginsFolder, renderSettingsPluginList, renderToolbarPlugins } from "./plugins";
 
 const GITHUB_LATEST_RELEASE_API = "https://api.github.com/repos/tznthou/plume/releases/latest";
 const GITHUB_LATEST_RELEASE_URL = "https://github.com/tznthou/plume/releases/latest";
@@ -182,6 +183,8 @@ export function initSettings(options?: {
   const versionEl = document.querySelector<HTMLElement>("#app-version");
   const btnCheckUpdate = document.querySelector<HTMLButtonElement>("#btn-check-update");
   const btnOpenThemes = document.querySelector<HTMLButtonElement>("#btn-open-themes");
+  const btnImportPlugin = document.querySelector<HTMLButtonElement>("#btn-import-plugin");
+  const btnOpenPlugins = document.querySelector<HTMLButtonElement>("#btn-open-plugins");
 
   if (versionEl) {
     void getAppVersion().then((ver) => {
@@ -203,6 +206,16 @@ export function initSettings(options?: {
     options?.onOpenThemesFolder?.();
   });
 
+  btnImportPlugin?.addEventListener("click", () => {
+    void importPluginZip().catch((err) => {
+      alert(`${t("ui.importPluginErrorTitle")}: ${String(err)}`);
+    });
+  });
+
+  btnOpenPlugins?.addEventListener("click", () => {
+    void openPluginsFolder();
+  });
+
   overlay?.addEventListener("click", (e) => {
     if (e.target === overlay) hideSettings();
   });
@@ -210,6 +223,11 @@ export function initSettings(options?: {
 
 export function showSettings(): void {
   if (!overlay) return;
+  renderSettingsPluginList();
+  void loadPluginsFromBackend().then(() => {
+    renderSettingsPluginList();
+    renderToolbarPlugins();
+  });
   hideAbort?.abort();
   hideAbort = null;
   overlay.hidden = false;
