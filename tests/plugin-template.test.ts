@@ -11,7 +11,9 @@
 //      tabstop 編號不與模板作者手寫的內容撞號。
 import { describe, expect, it } from "vitest";
 import { EditorState } from "@codemirror/state";
-import { snippet } from "@codemirror/autocomplete";
+import { snippet, snippetKeymap } from "@codemirror/autocomplete";
+import { EditorView } from "@codemirror/view";
+import { basicSetup } from "codemirror";
 
 // ---------------------------------------------------------------------------
 // 測試工具：跑一次真實的 snippet()，回傳插入後的文件與初始選取範圍
@@ -164,6 +166,54 @@ describe("CM6 snippet() 行為契約（提案的地基，升版改行為要在�
       [0, 6],
       [7, 17],
     ]);
+  });
+});
+
+describe("Tab 導航不需要我們註冊 keymap", () => {
+  // basicSetup 確實不含 snippetKeymap（它只 import closeBracketsKeymap /
+  // completionKeymap），但這不代表要自己掛：snippet() 在插入時會用
+  // StateEffect.appendConfig 動態注入 snippetState + addSnippetKeymap。
+  // 提案 §4.2 說「Tab 導航由 CM6 提供，我們不實作」靠的是這個機制，
+  // 所以這裡用真實 EditorView 驗一次，而不是相信任何一方的說法。
+  function mount(doc: string) {
+    return new EditorView({
+      state: EditorState.create({ doc, extensions: [basicSetup] }),
+      parent: document.body,
+    });
+  }
+
+  function pressTab(view: EditorView) {
+    // 走真實的 keydown 路徑。直接呼叫 binding 的 run() 會繞過 keymap 註冊，
+    // 那樣測不出 extension 到底有沒有進 state。
+    view.contentDOM.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", code: "Tab", keyCode: 9, bubbles: true, cancelable: true }),
+    );
+    return view.state.selection.main.from;
+  }
+
+  it("basicSetup 本身不含 snippetKeymap，Tab 不會移動游標（對照組）", () => {
+    // 沒有這組，下面那個 PASS 可能只是因為 Tab 本來就會做點什麼。
+    const view = mount("abc");
+    view.dispatch({ selection: { anchor: 1 } });
+    expect(pressTab(view)).toBe(1);
+    view.destroy();
+  });
+
+  it("插入模板後 Tab 跳到下一個 tabstop——snippet() 自行注入了 keymap", () => {
+    const view = mount("");
+    snippet("a${1}b${2}c${0}")(view, null, 0, 0);
+    expect(view.state.selection.main.from).toBe(1); // 停在 ${1}
+    expect(pressTab(view)).toBe(2); // Tab → ${2}
+    expect(pressTab(view)).toBe(3); // Tab → ${0}
+    view.destroy();
+  });
+
+  it("facet 查詢本身沒有鑑別力，不能拿來當註冊證據", () => {
+    // snippetKeymap 的 combine 是 `maps.length ? maps[0] : defaultSnippetKeymap`，
+    // 所以連一個沒插入過 snippet 的 editor 都查得到 Tab binding。
+    const view = mount("abc");
+    expect(view.state.facet(snippetKeymap).some((b) => b.key === "Tab")).toBe(true);
+    view.destroy();
   });
 });
 

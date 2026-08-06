@@ -66,7 +66,7 @@ PR #31 把「擴充性」與「任意程式碼執行」綁成一件事：外掛�
 
 ## 4. 模板語法
 
-模板最終交給 `@codemirror/autocomplete` 的 `snippet()`（已在 bundle 內，`basicSetup` 的一部分，**零新增依賴**）。Plume 只負責把 `{{...}}` 變數求值後轉譯成 CM6 語法。
+模板最終交給 `@codemirror/autocomplete` 的 `snippet()`。該套件已因 `basicSetup` 進了 bundle，所以是**零新增依賴**（但 snippet 的 keymap 不在 basicSetup 裡，見 §4.2）。Plume 只負責把 `{{...}}` 變數求值後轉譯成 CM6 語法。
 
 > 本節每條規則都有 `tests/plugin-template.test.ts` 撐著——CM6 的行為契約、逸出的無損還原、tabstop 編號，全是可執行的斷言，而不是讀原始碼得出的推論。該檔的 `REFERENCE IMPLEMENTATION` 段就是本節的規格，定案時整段搬進 `src/plugins.ts`，測試留在原地。以下引用的 CM6 行為皆為 `@codemirror/autocomplete` 6.20.3 實測。
 
@@ -89,7 +89,7 @@ PR #31 把「擴充性」與「任意程式碼執行」綁成一件事：外掛�
 
 依出現順序成為 Tab 停留點。轉譯規則（共 N 個，編號從 1 起算）：
 
-```
+```text
 第 1 .. N-1 個 {{cursor}}      →  ${1} .. ${N-1}
 第 N 個（最後一個）{{cursor}}   →  ${0}
 {{cursor:預設文字}}            →  同上並帶 default text，如 ${1:預設文字}
@@ -97,7 +97,9 @@ PR #31 把「擴充性」與「任意程式碼執行」綁成一件事：外掛�
 
 最後一個轉成 `${0}` 而非 `${N}`，是因為 CM6 對 `${0}` 有特殊處理（`Snippet.parse` 內 `if (seq === 0) seq = 1e9`），把它排到所有 tabstop 之後當最終游標位置。**編號起點必須釘死在 1**——若從 0 起算，第一個 `{{cursor}}` 會被排到最後，Tab 順序整個反過來。
 
-Tab / Shift-Tab 導航由 CM6 的 `snippetKeymap` 提供，我們不實作。
+Tab / Shift-Tab 導航我們不實作，但**不是因為 `basicSetup` 已經含了 `snippetKeymap`——它沒有**（basicSetup 只 import 了 `closeBracketsKeymap` 與 `completionKeymap`）。真正的機制是 `snippet()` 在插入時，若模板存在 index > 0 的 field，會用 `StateEffect.appendConfig` 把 `snippetState` 與 `addSnippetKeymap` 動態注入 state。
+
+這個差別會影響實作：**不要**自己去掛 `keymap.of(snippetKeymap)`。`snippetKeymap` 是一個 `Facet` 而非 keybinding 陣列，`[...snippetKeymap]` 不可迭代；而且它的 `combine` 是 `maps.length ? maps[0] : defaultSnippetKeymap`，所以連沒插入過 snippet 的 editor 都查得到 Tab binding——拿 facet 查詢當「keymap 已註冊」的證據會得到假陽性。要驗就發真實 keydown 並比對照組，`tests/plugin-template.test.ts` 有一組。
 
 預設文字**不可含大括號**。CM6 的 default text regex 是 `[^{}]*`，含大括號會讓整個 field 靜默失效——`${1:a{b}}` 原樣輸出到使用者文件裡。驗證期拒絕（§5.2）。
 
@@ -139,7 +141,7 @@ const escapeExpansion = (raw: string) =>
 
 原本考慮過 `wrapSelection`（用前後綴包住選取）作為第二個原語，但它可以用模板表達：
 
-```
+```text
 粗體：  **{{selection}}**{{cursor}}
 引用：  > {{selection}}
 程式碼： ```{{cursor:language}}\n{{selection}}\n```
@@ -164,7 +166,7 @@ const escapeExpansion = (raw: string) =>
 
 沿用主題的既有模式（`load_custom_themes` / `open_themes_dir`），**不新增匯入 zip 的路徑**。
 
-```
+```text
 plugins/
   frontmatter/plugin.json
   daily-note/plugin.json
@@ -223,7 +225,7 @@ plugins/
 
 工具列已有 8 個按鈕，直接攤平會擠。外掛收在一個 dropdown 內，沿用既有的 `#export-dropdown` 結構與樣式：
 
-```
+```text
 [🧩 ▾]  →  文章前置資料
            每日筆記
            時間戳記
